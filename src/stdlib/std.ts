@@ -7,6 +7,10 @@ function makeModule<T extends Module>(entries: T): Readonly<T> {
   return Object.freeze(obj);
 }
 
+export interface StdRuntimeContext {
+  currentDateTime?: Date;
+}
+
 const bannedProperties = new Set(["__proto__", "prototype", "constructor"]);
 
 function assertSafeKey(key: string, prefix: string): void {
@@ -49,7 +53,21 @@ function pmt(rate: number, nper: number, pv: number, fv = 0, type = 0): number {
   return -(rate * (fv + pv * pow)) / ((1 + rate * type) * (pow - 1));
 }
 
-export const std = makeModule({
+function makeNowGetter(context?: StdRuntimeContext): () => Date {
+  const hasKey = Boolean(context) && Object.prototype.hasOwnProperty.call(context, "currentDateTime");
+  if (!hasKey) return () => new Date();
+
+  const dt = context?.currentDateTime;
+  if (!(dt instanceof Date) || Number.isNaN(dt.getTime())) throw new Error("std: invalid currentDateTime");
+  const fixed = new Date(dt.getTime());
+  return () => new Date(fixed.getTime());
+}
+
+export function createStd(context?: StdRuntimeContext): Readonly<Record<string, unknown>> {
+  const getNow = makeNowGetter(context);
+  let std: any;
+
+  std = makeModule({
   math: makeModule({
     sum(xs: unknown): number {
       if (!Array.isArray(xs)) throw new Error("sum: expected array");
@@ -469,6 +487,13 @@ export const std = makeModule({
   }),
 
   date: makeModule({
+    now(): Date {
+      return getNow();
+    },
+    today(): Date {
+      const dt = getNow();
+      return new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
+    },
     parse(value: string): Date {
       if (typeof value !== "string") throw new Error("parse: expected ISO date string");
       return parseIsoDate(value);
@@ -530,6 +555,12 @@ export const std = makeModule({
     },
   }),
 });
+
+  deepFreeze(std);
+  return std;
+}
+
+export const std = createStd();
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   if ((typeof value !== "object" && typeof value !== "function") || value === null) return value;

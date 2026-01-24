@@ -3,7 +3,7 @@ import { evaluateNodes } from "./calcscript/eval.js";
 import { parseDataBlock } from "./data.js";
 import { parseInputsBlock } from "./inputs.js";
 import { parseCalcdownMarkdown } from "./markdown.js";
-import { std } from "./stdlib/std.js";
+import { createStd, type StdRuntimeContext, std } from "./stdlib/std.js";
 import {
   CalcdownMessage,
   DataTable,
@@ -265,7 +265,8 @@ function normalizeOverrideValue(def: InputDefinition, value: unknown): InputValu
 
 export function evaluateProgram(
   program: CalcdownProgram,
-  overrides: Record<string, unknown> = {}
+  overrides: Record<string, unknown> = {},
+  context: StdRuntimeContext = {}
 ): { values: Record<string, unknown>; messages: CalcdownMessage[] } {
   const messages: CalcdownMessage[] = [];
 
@@ -301,10 +302,27 @@ export function evaluateProgram(
     }
   }
 
+  let currentDateTime: Date;
+  const overrideNow = context.currentDateTime;
+  if (overrideNow === undefined) {
+    currentDateTime = new Date();
+  } else if (!(overrideNow instanceof Date) || Number.isNaN(overrideNow.getTime())) {
+    messages.push({
+      severity: "error",
+      code: "CD_CONTEXT_INVALID_DATETIME",
+      message: "Invalid currentDateTime override (expected a valid Date)",
+    });
+    currentDateTime = new Date();
+  } else {
+    currentDateTime = overrideNow;
+  }
+
+  const runtimeStd = createStd({ currentDateTime });
+
   const evalRes = evaluateNodes(
     program.nodes,
     Object.assign(Object.create(null), inputs, tables),
-    std
+    runtimeStd
   );
   messages.push(...evalRes.messages);
 
@@ -312,4 +330,4 @@ export function evaluateProgram(
   return { values, messages };
 }
 
-export { std };
+export { createStd, std };

@@ -322,6 +322,19 @@ Rules:
 
 ### 3.5 `std.date`
 
+#### `std.date.now()`
+
+Return the current datetime according to the evaluation context.
+
+Rules:
+
+- Engines SHOULD supply a deterministic “current datetime” value per evaluation session.
+- If no context is supplied, implementations MAY use the host’s current time.
+
+#### `std.date.today()`
+
+Return the current date (UTC midnight) according to the evaluation context.
+
 #### `std.date.parse(value)`
 
 Parse an ISO date string (`YYYY-MM-DD`) into a `Date` (UTC midnight).
@@ -358,5 +371,5 @@ Throw a deterministic model error if `condition` is falsy.
 
 ## Appendix A) Changes from 0.5 → 0.6
 
-- No functional changes; 0.6 focuses on project composition, lockfiles, and tooling in `docs/calcdown-0.6.md`.
-
+- Add `std.date.now()` and `std.date.today()` (evaluation-context based).
+- 0.6 otherwise focuses on project composition, lockfiles, and tooling in `docs/calcdown-0.6.md`.

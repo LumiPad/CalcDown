@@ -8,14 +8,15 @@ import { evaluateProgram, parseProgram } from "../dist/index.js";
 import { coerceRowsToTable } from "../dist/data.js";
 import { validateViewsFromBlocks } from "../dist/view_contract.js";
 import { parseCsv } from "../dist/util/csv.js";
+import { parseIsoDate } from "../dist/util/date.js";
 
 function usage() {
   return [
     "Usage:",
-    "  tools/calcdown.js validate <entry.calc.md|calcdown.json> [--lock calcdown.lock.json]",
+    "  tools/calcdown.js validate <entry.calc.md|calcdown.json> [--lock calcdown.lock.json] [--date YYYY-MM-DD|--datetime ISO]",
     "  tools/calcdown.js diff <a.calc.md> <b.calc.md>",
     "  tools/calcdown.js lock <entry.calc.md|calcdown.json> [out.lock.json]",
-    "  tools/calcdown.js export <entry.calc.md|calcdown.json> [--out out.json] [--lock calcdown.lock.json]",
+    "  tools/calcdown.js export <entry.calc.md|calcdown.json> [--out out.json] [--lock calcdown.lock.json] [--date YYYY-MM-DD|--datetime ISO]",
     "  tools/calcdown.js fmt [files...]",
     "",
     "Notes:",
@@ -63,6 +64,27 @@ function isHttpUri(uri) {
 
 function sourceFileLabel(uri, baseDir) {
   return isHttpUri(uri) ? uri : path.resolve(baseDir, uri);
+}
+
+function parseCurrentDateTime(args) {
+  const dateIdx = args.indexOf("--date");
+  const datetimeIdx = args.indexOf("--datetime");
+  if (dateIdx !== -1 && datetimeIdx !== -1) {
+    throw new Error("Use only one of --date or --datetime");
+  }
+  if (dateIdx !== -1) {
+    const raw = args[dateIdx + 1];
+    if (!raw) throw new Error("--date expects YYYY-MM-DD");
+    return parseIsoDate(raw);
+  }
+  if (datetimeIdx !== -1) {
+    const raw = args[datetimeIdx + 1];
+    if (!raw) throw new Error("--datetime expects an ISO datetime string");
+    const dt = new Date(raw);
+    if (Number.isNaN(dt.getTime())) throw new Error(`Invalid --datetime: ${raw}`);
+    return dt;
+  }
+  return null;
 }
 
 function projectRelative(p) {
@@ -539,7 +561,9 @@ async function cmdValidate(entry, opts = {}) {
     if (loaded.rows) overrides[t.name] = loaded.rows;
   }
 
-  const evaluated = evaluateProgram(merged.program, overrides);
+  const currentDateTime =
+    opts && typeof opts === "object" && opts.currentDateTime instanceof Date ? opts.currentDateTime : undefined;
+  const evaluated = evaluateProgram(merged.program, overrides, currentDateTime ? { currentDateTime } : {});
   for (const m of evaluated.messages) {
     const nodeName = m && typeof m === "object" ? m.nodeName : undefined;
     const origin = typeof nodeName === "string" ? merged.origins.get(nodeName) : null;
@@ -934,7 +958,9 @@ async function cmdExport(entryArg, opts = {}) {
     if (loaded.rows) overrides[t.name] = loaded.rows;
   }
 
-  const evaluated = evaluateProgram(merged.program, overrides);
+  const currentDateTime =
+    opts && typeof opts === "object" && opts.currentDateTime instanceof Date ? opts.currentDateTime : undefined;
+  const evaluated = evaluateProgram(merged.program, overrides, currentDateTime ? { currentDateTime } : {});
   for (const m of evaluated.messages) {
     const nodeName = m && typeof m === "object" ? m.nodeName : undefined;
     const origin = typeof nodeName === "string" ? merged.origins.get(nodeName) : null;
@@ -1075,7 +1101,8 @@ async function main() {
     if (!entry) throw new Error("validate: missing <entry.calc.md|calcdown.json>");
     const lockIdx = args.indexOf("--lock");
     const lockPath = lockIdx !== -1 ? args[lockIdx + 1] : null;
-    await cmdValidate(entry, { lockPath });
+    const currentDateTime = parseCurrentDateTime(args);
+    await cmdValidate(entry, { lockPath, ...(currentDateTime ? { currentDateTime } : {}) });
     return;
   }
 
@@ -1102,7 +1129,8 @@ async function main() {
     const outPath = outIdx !== -1 ? args[outIdx + 1] : null;
     const lockIdx = args.indexOf("--lock");
     const lockPath = lockIdx !== -1 ? args[lockIdx + 1] : null;
-    await cmdExport(entry, { outPath, lockPath });
+    const currentDateTime = parseCurrentDateTime(args);
+    await cmdExport(entry, { outPath, lockPath, ...(currentDateTime ? { currentDateTime } : {}) });
     return;
   }
 

@@ -315,6 +315,7 @@ Scalar types (core):
 - The project defines a dependency graph of nodes: inputs, data tables, computed nodes, views.
 - Engines evaluate nodes in topological order.
 - On change, engines SHOULD re-evaluate only affected downstream nodes (reactive updates).
+- Engines SHOULD evaluate with a deterministic “current datetime” per evaluation session (used by `std.date.now()` and `std.date.today()`).
 
 External data sources (§3.3.3) MUST be loaded and validated before evaluating dependent nodes.
 
@@ -345,6 +346,8 @@ Implementations SHOULD provide `calcdown validate` that:
 If `--lock <path>` is provided, `calcdown validate` MUST also enforce lock semantics (§2.4).
 
 If `--lock` is not provided and the project is loaded via a manifest with `lock`, `calcdown validate` MUST enforce that lockfile.
+
+Implementations MAY accept a runtime clock override for `std.date.now()` / `std.date.today()` (for example: `--date YYYY-MM-DD` or `--datetime ISO`).
 
 ### 8.3 `calcdown lock`
 
@@ -391,13 +394,15 @@ CalcDown ships a JSON Schema for the export output:
 
 If `--lock <path>` is provided, `calcdown export` MUST enforce lock semantics (§2.4). If the project is loaded via a manifest with `lock` and `--lock` is not provided, `calcdown export` MUST enforce that lockfile.
 
+Implementations MAY accept a runtime clock override for `std.date.now()` / `std.date.today()` (for example: `--date YYYY-MM-DD` or `--datetime ISO`).
+
 ## 9) Safety model (0.6)
 
 CalcDown execution MUST be deterministic by default:
 
 - No access to `window`, `document`, `globalThis`, `fetch`, storage APIs, or timers (unless explicitly implemented by the host).
 - No dynamic code evaluation (`eval`, `Function`, `import()`).
-- No nondeterminism (time/random) unless explicitly provided as an input.
+- No nondeterminism (time/random) unless explicitly provided as an input or by the host as part of the evaluation context.
 
 Prototype-pollution defenses:
 

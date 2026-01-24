@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { std } from "../dist/stdlib/std.js";
+import { createStd, std } from "../dist/stdlib/std.js";
 
 function iso(date) {
   assert.ok(date instanceof Date);
@@ -373,6 +373,23 @@ test("std.date.parse / std.date.format", () => {
   assert.throws(() => std.date.format(d, 123), /format: expected template string/);
   assert.throws(() => std.date.format(d, "%"), /format: dangling %/);
   assert.throws(() => std.date.format(d, "%q"), /format: unsupported token/);
+});
+
+test("std.date.now / std.date.today (context)", () => {
+  const ctx = createStd({ currentDateTime: new Date("2026-01-24T12:34:56.000Z") });
+  const now1 = ctx.date.now();
+  const now2 = ctx.date.now();
+  assert.equal(now1.toISOString(), "2026-01-24T12:34:56.000Z");
+  assert.equal(now2.getTime(), now1.getTime());
+
+  const today = ctx.date.today();
+  assert.equal(iso(today), "2026-01-24");
+  assert.equal(today.getUTCHours(), 0);
+  assert.equal(today.getUTCMinutes(), 0);
+  assert.equal(today.getUTCSeconds(), 0);
+
+  assert.throws(() => createStd({ currentDateTime: new Date(Number.NaN) }), /std: invalid currentDateTime/);
+  assert.throws(() => createStd({ currentDateTime: undefined }), /std: invalid currentDateTime/);
 });
 
 test("std.finance.toMonthlyRate", () => {
