@@ -30,7 +30,10 @@ This repo includes a minimal browser-first TypeScript parser/evaluator scaffold:
 - Export evaluated values/views: `make export ENTRY=docs/examples/mortgage.calc.md EXPORT_OUT=build/export.json`
 - CI-ish local check: `make check`
 - Repo dump: `make dump` (writes `build/dump_repo.md`, gitignored)
-- Demo: `make demo` then open `http://localhost:5173/demo/`
+- Demo index: `make demo` then open `http://localhost:5173/`
+- Demo 1: open `http://localhost:5173/demo/`
 - Demo renders `view` blocks as simple SVG charts (JSON or YAML), with a UI toggle for line vs bar/column.
 - Demo 2: open `http://localhost:5173/demo2/` (cards view + inputs form) using `docs/examples/savings.calc.md`.
 - Demo 3: open `http://localhost:5173/demo3/` (tabular `data` input + computed table output) using `docs/examples/invoice.calc.md`.
+- Demo 4: open `http://localhost:5173/demo4/` (full view renderer) with an example selector.
+- Demo 5: open `http://localhost:5173/demo5/` (external CSV/JSON `data.source` loader + hash verification) using `docs/examples/invoice-external.calc.md`.

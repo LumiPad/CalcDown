@@ -37,7 +37,7 @@ watch: check-deps ## Watch-build TypeScript
 
 serve: ## Serve repo at http://localhost:$(PORT)
 	@command -v $(PYTHON) >/dev/null 2>&1 || { echo "ERROR: $(PYTHON) not found on PATH."; exit 1; }
-	@echo "Serving http://localhost:$(PORT)/demo/"
+	@echo "Serving http://localhost:$(PORT)/"
 	$(PYTHON) -m http.server $(PORT)
 
 demo: build ## Build then serve demo
