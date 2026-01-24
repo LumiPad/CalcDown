@@ -1,6 +1,6 @@
 ---
 title: Simple cashflow (CalcDown example)
-calcdown: 0.5
+calcdown: 0.6
 ---
 
 # Simple cashflow
@@ -28,9 +28,9 @@ columns:
   inflow: number
   outflow: number
 ---
-{"id":"m1","month":"2024-01-01","inflow":3200,"outflow":2800}
-{"id":"m2","month":"2024-02-01","inflow":3200,"outflow":2950}
-{"id":"m3","month":"2024-03-01","inflow":3200,"outflow":3100}
+{"id":"m1","inflow":3200,"month":"2024-01-01","outflow":2800}
+{"id":"m2","inflow":3200,"month":"2024-02-01","outflow":2950}
+{"id":"m3","inflow":3200,"month":"2024-03-01","outflow":3100}
 ```
 
 ## Calc

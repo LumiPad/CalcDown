@@ -1,6 +1,6 @@
 ---
 title: Invoice (external data table)
-calcdown: 0.5
+calcdown: 0.6
 ---
 
 # Invoice (external data)

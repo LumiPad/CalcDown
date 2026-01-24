@@ -12,13 +12,17 @@ import { parseCsv } from "../dist/util/csv.js";
 function usage() {
   return [
     "Usage:",
-    "  tools/calcdown.js validate <entry.calc.md>",
+    "  tools/calcdown.js validate <entry.calc.md|calcdown.json> [--lock calcdown.lock.json]",
     "  tools/calcdown.js diff <a.calc.md> <b.calc.md>",
+    "  tools/calcdown.js lock <entry.calc.md|calcdown.json> [out.lock.json]",
+    "  tools/calcdown.js export <entry.calc.md|calcdown.json> [--out out.json] [--lock calcdown.lock.json]",
     "  tools/calcdown.js fmt [files...]",
     "",
     "Notes:",
     "  - validate loads front matter `include` recursively (comma-separated).",
     "  - validate verifies external data sources (data.source + data.hash).",
+    "  - validate can also check a lock file (--lock).",
+    "  - lock writes a deterministic lock file for docs + external data sources.",
     "  - fmt delegates to tools/fmt_calcdown.js.",
   ].join("\n");
 }
@@ -33,6 +37,7 @@ function splitCommaList(raw) {
 
 function stableSortKeys(value) {
   if (Array.isArray(value)) return value.map(stableSortKeys);
+  if (value instanceof Date) return value.toISOString();
   if (!value || typeof value !== "object") return value;
   const out = Object.create(null);
   const keys = Object.keys(value).sort((a, b) => a.localeCompare(b));
@@ -48,12 +53,21 @@ async function readText(p) {
   return await fs.readFile(p, "utf8");
 }
 
+function isPlainObject(v) {
+  return Boolean(v) && typeof v === "object" && !Array.isArray(v);
+}
+
 function isHttpUri(uri) {
   return /^https?:\/\//i.test(uri);
 }
 
 function sourceFileLabel(uri, baseDir) {
   return isHttpUri(uri) ? uri : path.resolve(baseDir, uri);
+}
+
+function projectRelative(p) {
+  const rel = path.relative(process.cwd(), p);
+  return rel && !rel.startsWith("..") && !path.isAbsolute(rel) ? rel : p;
 }
 
 async function loadUriText(uri, baseDir) {
@@ -116,6 +130,46 @@ function csvCellToTyped(type, raw) {
   }
 
   return text;
+}
+
+function normalizeIncludeList(raw) {
+  if (typeof raw === "string") return splitCommaList(raw);
+  if (Array.isArray(raw)) return raw.map((v) => (typeof v === "string" ? v.trim() : "")).filter(Boolean);
+  return [];
+}
+
+async function tryLoadManifest(entryPath) {
+  if (!entryPath.toLowerCase().endsWith(".json")) return null;
+  let text;
+  try {
+    text = await readText(entryPath);
+  } catch {
+    return null;
+  }
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!isPlainObject(data)) return null;
+  if (typeof data.entry !== "string" || !data.entry.trim()) return null;
+  return { file: entryPath, data };
+}
+
+async function resolveEntry(entryArg) {
+  const abs = path.resolve(entryArg);
+  const manifest = await tryLoadManifest(abs);
+  if (!manifest) {
+    return { kind: "doc", entryAbs: abs, manifestAbs: null, baseDir: path.dirname(abs), extraDocAbs: [], lockAbs: null };
+  }
+
+  const baseDir = path.dirname(manifest.file);
+  const entryAbs = path.resolve(baseDir, manifest.data.entry.trim());
+  const extra = normalizeIncludeList(manifest.data.include).map((p) => path.resolve(baseDir, p));
+  const lockRaw = typeof manifest.data.lock === "string" ? manifest.data.lock.trim() : "";
+  const lockAbs = lockRaw ? path.resolve(baseDir, lockRaw) : null;
+  return { kind: "manifest", entryAbs, manifestAbs: manifest.file, baseDir, extraDocAbs: extra, lockAbs };
 }
 
 async function loadExternalTable(table, originFile) {
@@ -230,8 +284,9 @@ async function loadExternalTable(table, originFile) {
   return { rows: coerced.rows, messages };
 }
 
-async function loadProject(entryPath) {
-  const entryAbs = path.resolve(entryPath);
+async function loadProject(entryArg) {
+  const resolved = await resolveEntry(entryArg);
+  const entryAbs = resolved.entryAbs;
   const seen = new Set();
   const docs = [];
 
@@ -245,7 +300,7 @@ async function loadProject(entryPath) {
     docs.push({ file: abs, markdown, parsed });
 
     const includeRaw = parsed.program.frontMatter?.data?.include;
-    const includes = splitCommaList(includeRaw);
+    const includes = normalizeIncludeList(includeRaw);
     for (const rel of includes) {
       const child = path.resolve(path.dirname(abs), rel);
       await visit(child);
@@ -253,6 +308,9 @@ async function loadProject(entryPath) {
   }
 
   await visit(entryAbs);
+  for (const extra of resolved.extraDocAbs ?? []) {
+    await visit(extra);
+  }
   return docs;
 }
 
@@ -307,7 +365,164 @@ function mergeProject(docs) {
   return { program: { frontMatter, blocks, inputs, tables, nodes }, messages, origins };
 }
 
-async function cmdValidate(entry) {
+function stableJsonPretty(value) {
+  return JSON.stringify(stableSortKeys(value), null, 2);
+}
+
+async function readLockFile(lockPath) {
+  const abs = path.resolve(lockPath);
+  const raw = await readText(abs);
+  const data = JSON.parse(raw);
+  if (!isPlainObject(data)) throw new Error("Lock file must be a JSON object");
+  const documents = Array.isArray(data.documents) ? data.documents : [];
+  const hasDataSources = Object.prototype.hasOwnProperty.call(data, "dataSources");
+  const dataSources = Array.isArray(data.dataSources) ? data.dataSources : [];
+  return { abs, data, documents, dataSources, hasDataSources };
+}
+
+async function checkLock({ lockPath, docs, merged, tableOrigin }) {
+  const messages = [];
+
+  let lock;
+  try {
+    lock = await readLockFile(lockPath);
+  } catch (err) {
+    messages.push({
+      severity: "error",
+      code: "CD_LOCK_READ",
+      message: `Failed to read lock file: ${err instanceof Error ? err.message : String(err)}`,
+      file: path.resolve(lockPath),
+    });
+    return { messages };
+  }
+
+  const lockDocs = [];
+  for (const d of lock.documents) {
+    if (!isPlainObject(d)) continue;
+    if (typeof d.path !== "string" || !d.path.trim()) continue;
+    if (typeof d.sha256 !== "string" || !/^[0-9a-fA-F]{64}$/.test(d.sha256)) continue;
+    lockDocs.push({ path: d.path.trim(), sha256: d.sha256.toLowerCase() });
+  }
+
+  const currentDocs = docs.map((d) => ({ rel: projectRelative(d.file), sha256: sha256Hex(d.markdown) }));
+  const currentDocMap = new Map(currentDocs.map((d) => [d.rel, d.sha256]));
+  const currentDocSet = new Set(currentDocs.map((d) => d.rel));
+  const lockDocSet = new Set(lockDocs.map((d) => d.path));
+
+  for (const ld of lockDocs) {
+    const actual = currentDocMap.get(ld.path);
+    if (!actual) {
+      messages.push({
+        severity: "error",
+        code: "CD_LOCK_DOC_MISSING",
+        message: `Lock file references missing document: ${ld.path}`,
+        file: lock.abs,
+      });
+      continue;
+    }
+    if (actual.toLowerCase() !== ld.sha256) {
+      messages.push({
+        severity: "error",
+        code: "CD_LOCK_DOC_HASH_MISMATCH",
+        message: `Document changed since lock: ${ld.path}`,
+        file: lock.abs,
+      });
+    }
+  }
+
+  for (const rel of currentDocSet) {
+    if (lockDocSet.has(rel)) continue;
+    messages.push({
+      severity: "error",
+      code: "CD_LOCK_DOC_EXTRA",
+      message: `Document not present in lock: ${rel}`,
+      file: lock.abs,
+    });
+  }
+
+  if (!lock.hasDataSources) {
+    return { messages };
+  }
+
+  const lockSources = [];
+  for (const s of lock.dataSources) {
+    if (!isPlainObject(s)) continue;
+    if (typeof s.table !== "string" || !s.table.trim()) continue;
+    if (typeof s.source !== "string" || !s.source.trim()) continue;
+    if (typeof s.sha256 !== "string" || !/^[0-9a-fA-F]{64}$/.test(s.sha256)) continue;
+    const format = typeof s.format === "string" ? s.format : null;
+    lockSources.push({ table: s.table.trim(), source: s.source.trim(), sha256: s.sha256.toLowerCase(), format });
+  }
+
+  const currentSources = [];
+  for (const t of merged.program.tables) {
+    if (!t.source) continue;
+    const origin = tableOrigin.get(t.name) ?? docs[0]?.file ?? process.cwd();
+    const baseDir = path.dirname(origin);
+    const resolvedLabel = isHttpUri(t.source.uri) ? t.source.uri : projectRelative(path.resolve(baseDir, t.source.uri));
+    currentSources.push({
+      table: t.name,
+      source: resolvedLabel,
+      uri: t.source.uri,
+      format: t.source.format,
+      originFile: origin,
+      baseDir,
+    });
+  }
+
+  const currentSourceMap = new Map(currentSources.map((s) => [`${s.table}::${s.source}`, s]));
+  const currentSourceSet = new Set(currentSources.map((s) => `${s.table}::${s.source}`));
+  const lockSourceSet = new Set(lockSources.map((s) => `${s.table}::${s.source}`));
+
+  for (const ls of lockSources) {
+    const cur = currentSourceMap.get(`${ls.table}::${ls.source}`);
+    if (!cur) {
+      messages.push({
+        severity: "error",
+        code: "CD_LOCK_SOURCE_MISSING",
+        message: `Lock file references missing data source: ${ls.table} -> ${ls.source}`,
+        file: lock.abs,
+      });
+      continue;
+    }
+    let text;
+    try {
+      text = await loadUriText(cur.uri, cur.baseDir);
+    } catch (err) {
+      messages.push({
+        severity: "error",
+        code: "CD_LOCK_SOURCE_READ",
+        message: `Failed to load data source for lock check: ${ls.source} (${err instanceof Error ? err.message : String(err)})`,
+        file: lock.abs,
+      });
+      continue;
+    }
+    const actual = sha256Hex(text);
+    if (actual.toLowerCase() !== ls.sha256) {
+      messages.push({
+        severity: "error",
+        code: "CD_LOCK_SOURCE_HASH_MISMATCH",
+        message: `Data source changed since lock: ${ls.source}`,
+        file: lock.abs,
+      });
+    }
+  }
+
+  for (const key of currentSourceSet) {
+    if (lockSourceSet.has(key)) continue;
+    const [tableName, sourceLabel] = key.split("::");
+    messages.push({
+      severity: "error",
+      code: "CD_LOCK_SOURCE_EXTRA",
+      message: `Data source not present in lock: ${tableName} -> ${sourceLabel}`,
+      file: lock.abs,
+    });
+  }
+
+  return { messages };
+}
+
+async function cmdValidate(entry, opts = {}) {
   const docs = await loadProject(entry);
   const merged = mergeProject(docs);
 
@@ -388,6 +603,14 @@ async function cmdValidate(entry) {
     warnings: messages.filter((m) => m && typeof m === "object" && m.severity === "warning").length,
   };
 
+  const lockPath = typeof opts.lockPath === "string" && opts.lockPath.trim() ? opts.lockPath.trim() : null;
+  if (lockPath) {
+    const lockRes = await checkLock({ lockPath, docs, merged, tableOrigin });
+    messages.push(...lockRes.messages);
+    summary.errors = messages.filter((m) => m && typeof m === "object" && m.severity === "error").length;
+    summary.warnings = messages.filter((m) => m && typeof m === "object" && m.severity === "warning").length;
+  }
+
   const payload = { summary, messages };
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 
@@ -458,6 +681,98 @@ function diffMaps(a, b) {
   return { added, removed, changed };
 }
 
+function normalizeJsonValue(value) {
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(normalizeJsonValue);
+  if (!value || typeof value !== "object") return value;
+
+  const out = Object.create(null);
+  const keys = Object.keys(value).sort((a, b) => a.localeCompare(b));
+  for (const k of keys) out[k] = normalizeJsonValue(value[k]);
+  return out;
+}
+
+function stableValue(value) {
+  return JSON.stringify(normalizeJsonValue(value));
+}
+
+function diffRowKeys(a, b) {
+  const keys = new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]);
+  const changed = [];
+  for (const k of [...keys].sort((x, y) => x.localeCompare(y))) {
+    const av = a ? stableValue(a[k]) : "undefined";
+    const bv = b ? stableValue(b[k]) : "undefined";
+    if (av !== bv) changed.push(k);
+  }
+  return changed;
+}
+
+function pkString(row, primaryKey) {
+  if (!row || typeof row !== "object") return null;
+  const v = row[primaryKey];
+  if (typeof v === "string") return v;
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return null;
+}
+
+function diffTableRows(primaryKey, aRows, bRows) {
+  const aMap = new Map();
+  for (const r of aRows) {
+    const k = pkString(r, primaryKey);
+    if (!k) continue;
+    if (!aMap.has(k)) aMap.set(k, r);
+  }
+
+  const bMap = new Map();
+  for (const r of bRows) {
+    const k = pkString(r, primaryKey);
+    if (!k) continue;
+    if (!bMap.has(k)) bMap.set(k, r);
+  }
+
+  const aKeys = new Set(aMap.keys());
+  const bKeys = new Set(bMap.keys());
+
+  const added = [];
+  const removed = [];
+  const changed = [];
+  const changedKeys = Object.create(null);
+
+  for (const k of [...bKeys].sort((x, y) => x.localeCompare(y))) if (!aKeys.has(k)) added.push(k);
+  for (const k of [...aKeys].sort((x, y) => x.localeCompare(y))) if (!bKeys.has(k)) removed.push(k);
+
+  for (const k of [...aKeys].sort((x, y) => x.localeCompare(y))) {
+    if (!bKeys.has(k)) continue;
+    const aRow = aMap.get(k);
+    const bRow = bMap.get(k);
+    if (stableValue(aRow) !== stableValue(bRow)) {
+      changed.push(k);
+      changedKeys[k] = diffRowKeys(aRow, bRow);
+    }
+  }
+
+  return { primaryKey, added, removed, changed, changedKeys };
+}
+
+async function materializeTableRows(merged, docs, entryArg) {
+  const messages = [];
+  const tableOrigin = new Map(docs.flatMap((d) => d.parsed.program.tables.map((t) => [t.name, d.file])));
+  const rowsByName = Object.create(null);
+
+  for (const t of merged.program.tables) {
+    if (!t.source) {
+      rowsByName[t.name] = t.rows;
+      continue;
+    }
+    const origin = tableOrigin.get(t.name) ?? entryArg;
+    const loaded = await loadExternalTable(t, origin);
+    messages.push(...loaded.messages);
+    rowsByName[t.name] = loaded.rows;
+  }
+
+  return { rowsByName, messages };
+}
+
 async function cmdDiff(aPath, bPath) {
   const aDocs = await loadProject(aPath);
   const bDocs = await loadProject(bPath);
@@ -474,9 +789,27 @@ async function cmdDiff(aPath, bPath) {
   const aViewsRes = asViewMap(aMerged.program.blocks);
   const bViewsRes = asViewMap(bMerged.program.blocks);
 
+  const aTablesRowsRes = await materializeTableRows(aMerged, aDocs, aPath);
+  const bTablesRowsRes = await materializeTableRows(bMerged, bDocs, bPath);
+
+  const tableRows = Object.create(null);
+  for (const name of Object.keys(aTables)) {
+    if (!(name in bTables)) continue;
+    const aTable = aMerged.program.tables.find((t) => t.name === name);
+    const bTable = bMerged.program.tables.find((t) => t.name === name);
+    if (!aTable || !bTable) continue;
+    if (aTable.primaryKey !== bTable.primaryKey) continue;
+
+    const aRows = aTablesRowsRes.rowsByName[name];
+    const bRows = bTablesRowsRes.rowsByName[name];
+    if (!Array.isArray(aRows) || !Array.isArray(bRows)) continue;
+    tableRows[name] = diffTableRows(aTable.primaryKey, aRows, bRows);
+  }
+
   const diff = {
     inputs: diffMaps(aInputs, bInputs),
     tables: diffMaps(aTables, bTables),
+    tableRows,
     nodes: diffMaps(aNodes, bNodes),
     views: diffMaps(aViewsRes.views, bViewsRes.views),
   };
@@ -488,12 +821,178 @@ async function cmdDiff(aPath, bPath) {
     warnings: {
       a: aMerged.messages,
       b: bMerged.messages,
+      aData: aTablesRowsRes.messages,
+      bData: bTablesRowsRes.messages,
       aViews: aViewsRes.messages,
       bViews: bViewsRes.messages,
     },
   };
 
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+async function cmdLock(entryArg, outPath) {
+  const resolved = await resolveEntry(entryArg);
+  const docs = await loadProject(entryArg);
+  const merged = mergeProject(docs);
+
+  const messages = [...merged.messages];
+  const tableOrigin = new Map(docs.flatMap((d) => d.parsed.program.tables.map((t) => [t.name, d.file])));
+
+  const documents = docs
+    .map((d) => ({ path: projectRelative(d.file), sha256: sha256Hex(d.markdown) }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+
+  const dataSources = [];
+  for (const t of merged.program.tables) {
+    if (!t.source) continue;
+
+    const origin = tableOrigin.get(t.name) ?? docs[0]?.file ?? process.cwd();
+    const baseDir = path.dirname(origin);
+    const label = isHttpUri(t.source.uri) ? t.source.uri : projectRelative(path.resolve(baseDir, t.source.uri));
+
+    let text;
+    try {
+      text = await loadUriText(t.source.uri, baseDir);
+    } catch (err) {
+      messages.push({
+        severity: "error",
+        code: "CD_LOCK_SOURCE_READ",
+        message: `Failed to load data source: ${label} (${err instanceof Error ? err.message : String(err)})`,
+        file: origin,
+        line: t.line,
+        blockLang: "data",
+        nodeName: t.name,
+      });
+      continue;
+    }
+
+    const actualHex = sha256Hex(text);
+    const expected = t.source.hash;
+    const expectedHex = expected.startsWith("sha256:") ? expected.slice("sha256:".length) : null;
+    if (!expectedHex || expectedHex.toLowerCase() !== actualHex.toLowerCase()) {
+      messages.push({
+        severity: "error",
+        code: "CD_DATA_HASH_MISMATCH",
+        message: `Hash mismatch for ${t.source.uri} (expected ${expected}, got sha256:${actualHex})`,
+        file: origin,
+        line: t.line,
+        blockLang: "data",
+        nodeName: t.name,
+      });
+    }
+
+    dataSources.push({
+      table: t.name,
+      source: label,
+      format: t.source.format,
+      declaredHash: t.source.hash,
+      sha256: actualHex,
+    });
+  }
+
+  dataSources.sort((a, b) => `${a.table}::${a.source}`.localeCompare(`${b.table}::${b.source}`));
+
+  const lock = {
+    calcdown: "0.6",
+    entry: projectRelative(resolved.entryAbs),
+    ...(resolved.manifestAbs ? { manifest: projectRelative(resolved.manifestAbs) } : {}),
+    documents,
+    dataSources,
+  };
+
+  const outAbs = path.resolve(outPath || "calcdown.lock.json");
+  await fs.writeFile(outAbs, `${stableJsonPretty(lock)}\n`, "utf8");
+
+  const errors = messages.filter((m) => m && typeof m === "object" && m.severity === "error").length;
+  if (errors > 0) {
+    process.stdout.write(`${JSON.stringify({ wrote: projectRelative(outAbs), errors, messages }, null, 2)}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  process.stdout.write(`${JSON.stringify({ wrote: projectRelative(outAbs) }, null, 2)}\n`);
+}
+
+async function cmdExport(entryArg, opts = {}) {
+  const resolved = await resolveEntry(entryArg);
+  const docs = await loadProject(entryArg);
+  const merged = mergeProject(docs);
+
+  const messages = [...merged.messages];
+  const tableOrigin = new Map(docs.flatMap((d) => d.parsed.program.tables.map((t) => [t.name, d.file])));
+
+  const overrides = Object.create(null);
+  for (const t of merged.program.tables) {
+    if (!t.source) continue;
+    const origin = tableOrigin.get(t.name) ?? resolved.entryAbs;
+    const loaded = await loadExternalTable(t, origin);
+    messages.push(...loaded.messages);
+    if (loaded.rows) overrides[t.name] = loaded.rows;
+  }
+
+  const evaluated = evaluateProgram(merged.program, overrides);
+  for (const m of evaluated.messages) {
+    const nodeName = m && typeof m === "object" ? m.nodeName : undefined;
+    const origin = typeof nodeName === "string" ? merged.origins.get(nodeName) : null;
+    messages.push({
+      ...m,
+      ...(origin && origin.file ? { file: origin.file } : {}),
+    });
+  }
+
+  const viewsRes = validateViewsFromBlocks(merged.program.blocks);
+  messages.push(...viewsRes.messages);
+
+  const lockPath = typeof opts.lockPath === "string" && opts.lockPath.trim() ? opts.lockPath.trim() : null;
+  if (lockPath) {
+    const lockRes = await checkLock({ lockPath, docs, merged, tableOrigin });
+    messages.push(...lockRes.messages);
+  }
+
+  const values = evaluated.values;
+
+  const inputs = Object.create(null);
+  for (const def of merged.program.inputs) inputs[def.name] = values[def.name];
+
+  const tables = Object.create(null);
+  for (const t of merged.program.tables) tables[t.name] = values[t.name];
+
+  const nodes = Object.create(null);
+  for (const n of merged.program.nodes) nodes[n.name] = values[n.name];
+
+  const views = viewsRes.views.map((v) => {
+    const out = Object.create(null);
+    for (const [k, val] of Object.entries(v)) {
+      if (k === "line") continue;
+      out[k] = val;
+    }
+    return out;
+  });
+
+  const out = {
+    calcdown: "0.6",
+    entry: projectRelative(resolved.entryAbs),
+    ...(resolved.manifestAbs ? { manifest: projectRelative(resolved.manifestAbs) } : {}),
+    documents: docs.map((d) => projectRelative(d.file)),
+    values: { inputs, tables, nodes },
+    views,
+    messages,
+  };
+
+  const text = `${stableJsonPretty(out)}\n`;
+
+  const outPath = typeof opts.outPath === "string" && opts.outPath.trim() ? opts.outPath.trim() : null;
+  if (outPath) {
+    const abs = path.resolve(outPath);
+    await fs.writeFile(abs, text, "utf8");
+    process.stdout.write(`${JSON.stringify({ wrote: projectRelative(abs) }, null, 2)}\n`);
+  } else {
+    process.stdout.write(text);
+  }
+
+  const errors = messages.filter((m) => m && typeof m === "object" && m.severity === "error").length;
+  if (errors > 0) process.exitCode = 1;
 }
 
 async function cmdFmt(args) {
@@ -522,7 +1021,9 @@ async function main() {
   if (cmd === "validate") {
     const entry = args[1];
     if (!entry) throw new Error("validate: missing <entry.calc.md>");
-    await cmdValidate(entry);
+    const lockIdx = args.indexOf("--lock");
+    const lockPath = lockIdx !== -1 ? args[lockIdx + 1] : null;
+    await cmdValidate(entry, { lockPath });
     return;
   }
 
@@ -531,6 +1032,25 @@ async function main() {
     const b = args[2];
     if (!a || !b) throw new Error("diff: expected <a.calc.md> <b.calc.md>");
     await cmdDiff(a, b);
+    return;
+  }
+
+  if (cmd === "lock") {
+    const entry = args[1];
+    if (!entry) throw new Error("lock: missing <entry.calc.md|calcdown.json>");
+    const out = args[2] ?? null;
+    await cmdLock(entry, out);
+    return;
+  }
+
+  if (cmd === "export") {
+    const entry = args[1];
+    if (!entry) throw new Error("export: missing <entry.calc.md|calcdown.json>");
+    const outIdx = args.indexOf("--out");
+    const outPath = outIdx !== -1 ? args[outIdx + 1] : null;
+    const lockIdx = args.indexOf("--lock");
+    const lockPath = lockIdx !== -1 ? args[lockIdx + 1] : null;
+    await cmdExport(entry, { outPath, lockPath });
     return;
   }
 

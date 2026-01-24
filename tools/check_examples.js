@@ -36,6 +36,24 @@ function sha256Hex(text) {
   return crypto.createHash("sha256").update(Buffer.from(text, "utf8")).digest("hex");
 }
 
+function isHttpUri(uri) {
+  return /^https?:\/\//i.test(uri);
+}
+
+async function loadUriText(uri, baseDir) {
+  if (isHttpUri(uri)) {
+    const res = await fetch(uri);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  }
+  const abs = path.resolve(baseDir, uri);
+  return await fs.readFile(abs, "utf8");
+}
+
+function sourceFileLabel(uri, baseDir) {
+  return isHttpUri(uri) ? uri : path.resolve(baseDir, uri);
+}
+
 function parseCsvRowsToObjects(csvText) {
   const parsed = parseCsv(csvText);
   if (!parsed.header.length) return { header: [], rows: [] };
@@ -93,11 +111,11 @@ async function loadExternalTablesForProgram(program, originFile) {
     if (!source) continue;
 
     const baseDir = path.dirname(originFile);
-    const absDataPath = path.resolve(baseDir, source.uri);
+    const dataFileLabel = sourceFileLabel(source.uri, baseDir);
 
     let text;
     try {
-      text = await fs.readFile(absDataPath, "utf8");
+      text = await loadUriText(source.uri, baseDir);
     } catch (err) {
       messages.push({
         severity: "error",
@@ -136,7 +154,7 @@ async function loadExternalTablesForProgram(program, originFile) {
             severity: "error",
             code: "CD_DATA_CSV_MISSING_COLUMN",
             message: `CSV source is missing declared column: ${col}`,
-            file: absDataPath,
+            file: dataFileLabel,
             line: 1,
             blockLang: "data",
             nodeName: table.name,
@@ -167,7 +185,7 @@ async function loadExternalTablesForProgram(program, originFile) {
           severity: "error",
           code: "CD_DATA_JSON_PARSE",
           message: err instanceof Error ? err.message : String(err),
-          file: absDataPath,
+          file: dataFileLabel,
           line: 1,
           blockLang: "data",
           nodeName: table.name,
@@ -190,7 +208,7 @@ async function loadExternalTablesForProgram(program, originFile) {
     const coerced = coerceRowsToTable(table.name, table.primaryKey, table.columns, rawRows, {
       baseLine: source.format === "csv" ? 2 : 1,
       blockLang: "data",
-      file: absDataPath,
+      file: dataFileLabel,
     });
     messages.push(...coerced.messages);
     overrides[table.name] = coerced.rows;
@@ -247,7 +265,7 @@ async function main() {
   const lines = [];
   lines.push("# Compatibility checklist (examples)");
   lines.push("");
-  lines.push("This file tracks whether each `docs/examples/*.calc.md` example parses and evaluates under CalcDown 0.5.");
+  lines.push("This file tracks whether each `docs/examples/*.calc.md` example parses and evaluates under CalcDown 0.6.");
   lines.push("");
   lines.push("Legend: ✓ works, ⚠ partial (warnings), ✗ broken (errors)");
   lines.push("");

@@ -1,11 +1,8 @@
-# CalcDown Standard Library 0.5 (Draft)
+# CalcDown Standard Library 0.6 (Draft)
 
-**This draft is SUPERSEDED.**  
-Current version → [CalcDown 0.6](calcdown-0.6.md) — [stdlib 0.6](stdlib-0.6.md)
+Status: **Draft / experimental**. This document specifies the standard library object available as `std` when evaluating CalcScript expressions in CalcDown 0.6.
 
-Status: **Draft / experimental**. This document specifies the standard library object available as `std` when evaluating CalcScript 0.5 expressions.
-
-See also: `docs/calcdown-0.5.md` (the file format, execution model, and CalcScript subset).
+See also: `docs/calcdown-0.6.md` (the file format, project files, execution model, and tooling).
 
 Goals:
 
@@ -19,7 +16,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are to be interpre
 
 ## 1) Conformance
 
-A CalcDown 0.5 engine MUST provide a `std` object with the **Core** APIs in §3.
+A CalcDown 0.6 engine MUST provide a `std` object with the **Core** APIs in §3.
 
 Engines MAY provide additional APIs in §4 (Recommended) and beyond, but MUST NOT expose unsafe capabilities (network, storage, timers, dynamic code loading).
 
@@ -358,3 +355,8 @@ Throw a deterministic model error if `condition` is falsy.
 - `std.lookup.interpolate`
 - `std.finance.ipmt`, `std.finance.ppmt`
 - `std.date.range` and other calendar helpers
+
+## Appendix A) Changes from 0.5 → 0.6
+
+- No functional changes; 0.6 focuses on project composition, lockfiles, and tooling in `docs/calcdown-0.6.md`.
+

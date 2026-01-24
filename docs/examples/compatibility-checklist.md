@@ -1,6 +1,6 @@
 # Compatibility checklist (examples)
 
-This file tracks whether each `docs/examples/*.calc.md` example parses and evaluates under CalcDown 0.5.
+This file tracks whether each `docs/examples/*.calc.md` example parses and evaluates under CalcDown 0.6.
 
 Legend: ✓ works, ⚠ partial (warnings), ✗ broken (errors)
 

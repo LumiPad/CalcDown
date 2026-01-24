@@ -15,6 +15,11 @@ These instructions apply to the whole repository unless a more specific `AGENTS.
 - `make analyze` — static analysis (unused locals/params)
 - `make test` — Node test runner + coverage thresholds (stdlib)
 - `make check` — `typecheck + analyze + test`
+- `make fmt` — canonicalize examples
+- `make validate` — validate a project (ENTRY=...)
+- `make lock` — write lockfile (ENTRY=... OUT=...)
+- `make export` — export evaluated output (ENTRY=... EXPORT_OUT=...)
+- `make diff` — semantic diff (A=... B=...)
 - `make demo` — build then serve demos
 - `make dump` — write a single-file repo dump for LLM review (gitignored)
 
@@ -32,6 +37,6 @@ These instructions apply to the whole repository unless a more specific `AGENTS.
 
 ## Documentation rules
 
-- Specs are versioned under `docs/` (e.g. `docs/calcdown-0.5.md`, `docs/stdlib-0.5.md`).
+- Specs are versioned under `docs/` (e.g. `docs/calcdown-0.6.md`, `docs/stdlib-0.6.md`).
 - Older versions stay **archived/superseded**, not rewritten.
 - Keep examples executable and consistent with the latest spec.

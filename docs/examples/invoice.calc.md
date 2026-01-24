@@ -1,6 +1,6 @@
 ---
 title: Invoice (CalcDown demo3)
-calcdown: 0.5
+calcdown: 0.6
 ---
 
 # Invoice
@@ -24,9 +24,9 @@ columns:
   qty: integer
   unit_price: number
 ---
-{"id":"i1","name":"Coffee beans","qty":2,"unit_price":18.50}
+{"id":"i1","name":"Coffee beans","qty":2,"unit_price":18.5}
 {"id":"i2","name":"Milk","qty":1,"unit_price":2.25}
-{"id":"i3","name":"Croissant","qty":3,"unit_price":3.10}
+{"id":"i3","name":"Croissant","qty":3,"unit_price":3.1}
 ```
 
 ## Calc

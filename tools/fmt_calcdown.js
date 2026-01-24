@@ -169,12 +169,51 @@ function formatDataBlock(content) {
   for (const c of columns) out.push(`  ${c.colName}: ${c.typeRaw}`);
   out.push("---");
 
+  if (!source && primaryKey) {
+    const parsedRows = [];
+    let ok = true;
+
+    for (let i = 0; i < rowLines.length; i++) {
+      const raw = rowLines[i] ?? "";
+      const t = raw.trim();
+      if (!t) continue;
+      if (t.startsWith("#")) {
+        ok = false;
+        break;
+      }
+
+      let obj;
+      try {
+        obj = JSON.parse(t);
+      } catch {
+        ok = false;
+        break;
+      }
+      if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+        ok = false;
+        break;
+      }
+
+      const pkVal = obj[primaryKey];
+      const pk = typeof pkVal === "string" ? pkVal : typeof pkVal === "number" ? String(pkVal) : null;
+      if (!pk) {
+        ok = false;
+        break;
+      }
+
+      parsedRows.push({ pk, idx: i, obj });
+    }
+
+    if (ok && parsedRows.length) {
+      parsedRows.sort((a, b) => a.pk.localeCompare(b.pk) || a.idx - b.idx);
+      for (const r of parsedRows) out.push(JSON.stringify(stableSortKeys(r.obj)));
+      return out.join("\n").trimEnd();
+    }
+  }
+
   for (const row of rowLines) {
     const t = (row ?? "").trim();
-    if (!t) {
-      out.push("");
-      continue;
-    }
+    if (!t) continue;
     out.push(t);
   }
 
