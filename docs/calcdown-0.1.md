@@ -152,6 +152,44 @@ Rules:
 - `source` MUST reference a table node.
 - Implementations MAY support multiple chart libraries.
 
+#### 3.4.1 Standard view types (recommended)
+
+CalcDown intends “views” to be a stable, declarative contract between the model and any UI.
+
+Recommended standardized view types:
+
+**Cards (summary)**
+
+Use cards when you want a small set of headline numbers (the “results pane” in a UI).
+
+```json
+{
+  "id": "summary",
+  "type": "cards",
+  "library": "calcdown",
+  "spec": {
+    "title": "Summary",
+    "items": [
+      { "key": "months", "label": "Months", "format": { "kind": "integer" } },
+      { "key": "final_balance", "label": "Final balance", "format": { "kind": "number", "digits": 0 } }
+    ]
+  }
+}
+```
+
+`cards.spec.items[]`:
+
+- `key` (string, required): name of a node to display
+- `label` (string, optional): display label (defaults to `key`)
+- `format` (optional): `number|integer|percent|currency|date` (either a string or an object with `{ kind, digits, currency }`)
+
+**Chart**
+
+Charts remain library-specific, but should always declare:
+
+- `source` (table node name)
+- `spec` (library-defined spec; e.g. Vega-Lite)
+
 ## 4) Types (0.1)
 
 Scalar types:
@@ -203,4 +241,3 @@ Implementations SHOULD provide `calcdown fmt` (or equivalent) that:
 - Validates JSONL rows and (optionally) sorts rows by primary key
 
 The goal is stable diffs: a semantic change should produce a small textual diff.
-

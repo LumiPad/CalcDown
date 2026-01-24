@@ -13,3 +13,12 @@ CalcDown is a text-first format for “spreadsheet-like” models: typed data + 
 
 Early-stage: this repo currently contains draft specifications and examples, not a full implementation.
 
+## Demo (parser/evaluator scaffold)
+
+This repo includes a minimal browser-first TypeScript parser/evaluator scaffold:
+
+- Install deps: `make install` (or `npm install`)
+- Build: `make build` (or `npm run build`)
+- Demo: `make demo` then open `http://localhost:5173/demo/`
+- Demo renders `view` blocks as simple SVG charts (JSON only), with a UI toggle for line vs bar/column.
+- Demo 2: open `http://localhost:5173/demo2/` (cards view + inputs form) using `docs/examples/savings.calc.md`.

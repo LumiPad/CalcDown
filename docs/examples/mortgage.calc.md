@@ -25,20 +25,18 @@ const total_paid = payment * total_months;
 const total_interest = total_paid - loan_amount;
 
 // Amortization schedule without loops via scan (running state).
-const schedule = std.data.scan(std.data.sequence(total_months, { start: 0 }), (state, monthIndex) => {
-  const opening_balance = state?.closing_balance ?? loan_amount;
-  const interest_pay = opening_balance * rate_mo;
-  const principal_pay = payment - interest_pay;
-  const closing_balance = opening_balance - principal_pay;
-
-  return {
+// Note: CalcScript 0.1 currently supports expression-bodied arrow functions.
+const schedule = std.data.scan(
+  std.data.sequence(total_months, { start: 0 }),
+  (state, monthIndex) => ({
     date: std.date.addMonths(start_date, monthIndex),
-    opening_balance,
-    interest_pay,
-    principal_pay,
-    closing_balance,
-  };
-});
+    opening_balance: state.closing_balance,
+    interest_pay: state.closing_balance * rate_mo,
+    principal_pay: payment - (state.closing_balance * rate_mo),
+    closing_balance: state.closing_balance - (payment - (state.closing_balance * rate_mo)),
+  }),
+  { seed: { closing_balance: loan_amount } }
+);
 ```
 
 Monthly payment: `{{ payment }}`  
@@ -47,15 +45,18 @@ Total interest: `{{ total_interest }}`
 ## View
 
 ```view
-id: paydown
-type: chart
-library: vega-lite
-source: schedule
-spec:
-  title: "Loan paydown"
-  mark: line
-  encoding:
-    x: { field: date, type: temporal, title: "Date" }
-    y: { field: closing_balance, type: quantitative, title: "Closing balance" }
+{
+  "id": "paydown",
+  "type": "chart",
+  "library": "vega-lite",
+  "source": "schedule",
+  "spec": {
+    "title": "Loan paydown",
+    "mark": "line",
+    "encoding": {
+      "x": { "field": "date", "type": "temporal", "title": "Date" },
+      "y": { "field": "closing_balance", "type": "quantitative", "title": "Closing balance" }
+    }
+  }
+}
 ```
-

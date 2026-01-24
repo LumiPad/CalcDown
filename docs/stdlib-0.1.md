@@ -63,6 +63,7 @@ Transformations (broadcasting helpers):
 - `std.data.map(xs, fn)` → column
 - `std.data.filter(tableOrColumn, predicate)` → filtered table/column
 - `std.data.sort(table, by, { order="asc" }={})` → stable sort
+- `std.data.last(xs)` → last element (errors on empty)
 
 Running-state / recursion replacement:
 
@@ -136,4 +137,3 @@ Depreciation:
 For constraints and model checks:
 
 - `std.assert(condition, message)` → throws a deterministic model error if `condition` is false.
-
