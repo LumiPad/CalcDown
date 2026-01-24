@@ -84,6 +84,86 @@ Rules:
 - `digits` MUST be an integer (default `0`).
 - Engines SHOULD use “half away from zero” semantics for spreadsheet parity.
 
+#### `std.math.abs(x)`
+
+Signature:
+
+```ts
+abs(x: number): number
+```
+
+Rules:
+
+- MUST throw if `x` is not a finite number.
+
+#### `std.math.sign(x)`
+
+Signature:
+
+```ts
+sign(x: number): number
+```
+
+Rules:
+
+- MUST throw if `x` is not a finite number.
+
+#### `std.math.sqrt(x)`
+
+Signature:
+
+```ts
+sqrt(x: number): number
+```
+
+Rules:
+
+- MUST throw if `x` is not a finite number.
+- MUST throw if the result is not a finite number.
+
+#### `std.math.exp(x)`
+
+Signature:
+
+```ts
+exp(x: number): number
+```
+
+Rules:
+
+- MUST throw if `x` is not a finite number.
+- MUST throw if the result is not a finite number.
+
+#### `std.math.ln(x)`
+
+Signature:
+
+```ts
+ln(x: number): number
+```
+
+Rules:
+
+- MUST throw if `x` is not a finite number.
+- MUST throw if the result is not a finite number.
+
+#### `std.math.log10(x)`
+
+Signature:
+
+```ts
+log10(x: number): number
+```
+
+Rules:
+
+- MUST throw if `x` is not a finite number.
+- MUST throw if the result is not a finite number.
+
+#### `std.math.PI`
+
+A numeric constant equal to π.
+
 ### 3.2 `std.data`
 
 #### `std.data.sequence(count, opts?)`
@@ -372,4 +452,5 @@ Throw a deterministic model error if `condition` is falsy.
 ## Appendix A) Changes from 0.5 → 0.6
 
 - Add `std.date.now()` and `std.date.today()` (evaluation-context based).
+- Add `std.math.abs`, `std.math.sign`, `std.math.sqrt`, `std.math.exp`, `std.math.ln`, `std.math.log10`, and `std.math.PI`.
 - 0.6 otherwise focuses on project composition, lockfiles, and tooling in `docs/calcdown-0.6.md`.

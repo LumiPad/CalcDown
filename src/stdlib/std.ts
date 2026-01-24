@@ -108,11 +108,11 @@ export function createStd(context?: StdRuntimeContext): Readonly<Record<string, 
       }
       return max ?? 0;
     },
-    round(x: number, digits = 0): number {
-      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("round: x must be finite");
-      if (typeof digits !== "number" || !Number.isFinite(digits) || !Number.isInteger(digits)) {
-        throw new Error("round: digits must be integer");
-      }
+	    round(x: number, digits = 0): number {
+	      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("round: x must be finite");
+	      if (typeof digits !== "number" || !Number.isFinite(digits) || !Number.isInteger(digits)) {
+	        throw new Error("round: digits must be integer");
+	      }
 
       // Spreadsheet-style rounding: half away from zero.
       const roundHalfAwayFromZero = (n: number): number => (n < 0 ? -Math.round(-n) : Math.round(n));
@@ -124,10 +124,44 @@ export function createStd(context?: StdRuntimeContext): Readonly<Record<string, 
       const factor = 10 ** abs;
       if (!Number.isFinite(factor) || factor === 0) throw new Error("round: digits out of range");
 
-      if (digits > 0) return roundHalfAwayFromZero(x * factor) / factor;
-      return roundHalfAwayFromZero(x / factor) * factor;
-    },
-  }),
+	      if (digits > 0) return roundHalfAwayFromZero(x * factor) / factor;
+	      return roundHalfAwayFromZero(x / factor) * factor;
+	    },
+	    abs(x: number): number {
+	      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("abs: x must be finite");
+	      return Math.abs(x);
+	    },
+	    sign(x: number): number {
+	      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("sign: x must be finite");
+	      const s = Math.sign(x);
+	      return Object.is(s, -0) ? 0 : s;
+	    },
+	    sqrt(x: number): number {
+	      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("sqrt: x must be finite");
+	      const y = Math.sqrt(x);
+	      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
+	      return y;
+	    },
+	    exp(x: number): number {
+	      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("exp: x must be finite");
+	      const y = Math.exp(x);
+	      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
+	      return y;
+	    },
+	    ln(x: number): number {
+	      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("ln: x must be finite");
+	      const y = Math.log(x);
+	      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
+	      return y;
+	    },
+	    log10(x: number): number {
+	      if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("log10: x must be finite");
+	      const y = Math.log(x) / Math.LN10;
+	      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
+	      return y;
+	    },
+	    PI: Math.PI,
+	  }),
 
   data: makeModule({
     sequence(count: number, opts?: { start?: number; step?: number }): number[] {

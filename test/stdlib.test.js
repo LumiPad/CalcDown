@@ -42,6 +42,31 @@ test("std.math.mean / minOf / maxOf / round", () => {
   assert.throws(() => std.math.round(1, 99), /round: digits out of range/);
 });
 
+test("std.math.abs / sign / sqrt / exp / ln / log10 / PI", () => {
+  assert.equal(std.math.abs(-2.5), 2.5);
+  assert.equal(std.math.abs(0), 0);
+  assert.throws(() => std.math.abs(Number.NaN), /abs: x must be finite/);
+
+  assert.equal(std.math.sign(-10), -1);
+  assert.equal(std.math.sign(0), 0);
+  assert.equal(std.math.sign(10), 1);
+  assert.throws(() => std.math.sign(Number.NaN), /sign: x must be finite/);
+
+  assert.equal(std.math.sqrt(9), 3);
+  assert.throws(() => std.math.sqrt(-1), /Non-finite numeric result/);
+
+  approxEqual(std.math.exp(0), 1);
+  assert.throws(() => std.math.exp(1000), /Non-finite numeric result/);
+
+  approxEqual(std.math.ln(Math.E), 1);
+  assert.throws(() => std.math.ln(0), /Non-finite numeric result/);
+
+  approxEqual(std.math.log10(1000), 3);
+  assert.throws(() => std.math.log10(0), /Non-finite numeric result/);
+
+  approxEqual(std.math.PI, Math.PI);
+});
+
 test("std.data.sequence", () => {
   assert.deepEqual(std.data.sequence(0), []);
   assert.deepEqual(std.data.sequence(5), [1, 2, 3, 4, 5]);
