@@ -4,6 +4,7 @@ export { buildBarChartCard, buildLineChartCard } from "./charts.js";
 export { formatFormattedValue, formatValue } from "./format.js";
 export { loadExternalTables } from "./external_tables.js";
 export { readInputOverrides, renderInputsForm } from "./inputs_form.js";
+export { CALCDOWN_BASE_CSS, installCalcdownStyles } from "./styles.js";
 export { mountCalcdown } from "./mount.js";
 export { renderCalcdownViews } from "./render_views.js";
 export type { ChartMode, TableEditEvent } from "./render_views.js";

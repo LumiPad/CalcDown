@@ -77,6 +77,7 @@ const final_balance = std.data.last(balances);
 - `docs/calcdown-0.8.md` — **current** file format + editor protocol
 - `docs/stdlib-0.8.md` — **current** standard library
 - `docs/integration.md` — embedding CalcDown in other tools
+- `docs/integration-example.html` — copy/paste integration template
 - `docs/examples/*.calc.md` — executable examples (use latest spec)
 - Archived drafts: `docs/calcdown-0.[1234567].md`, `docs/stdlib-0.[1234567].md`
 - Agent guidance: `AGENTS.md` (plus scoped files in subfolders)

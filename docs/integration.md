@@ -32,6 +32,16 @@ renderCalcdownViews({
 });
 ```
 
+## Styling (optional)
+
+The view renderer emits simple, stable class names (`view`, `view-title`, `cards`, `card`, etc.). For quick integrations, you can install a small default stylesheet:
+
+```ts
+import { installCalcdownStyles } from "../dist/web/index.js";
+
+installCalcdownStyles();
+```
+
 ## Markdown-extension style (mount + cleanup)
 
 For “Mermaid-style” integrations (render a fenced block to a DOM node and clean up later), use `mountCalcdown`:
@@ -86,6 +96,10 @@ The parser accepts JSON or YAML for `view` blocks.
 - In a bundler setup, install and bundle `js-yaml` normally.
 
 If you want to avoid YAML support, keep `view` blocks as JSON.
+
+## Example page
+
+See `docs/integration-example.html` for a copy/paste “drop this into any page” integration template.
 
 ## External data sources (browser)
 
