@@ -137,6 +137,14 @@ async function main() {
   const version = CURRENT_CALCDOWN_VERSION;
   const errors = [];
 
+  const demoIndex = await fs.readFile(path.join(root, "index.html"), "utf8");
+  if (!demoIndex.includes(`./docs/calcdown-${version}.md`)) {
+    errors.push(`index.html must link to ./docs/calcdown-${version}.md`);
+  }
+  if (!demoIndex.includes(`./docs/stdlib-${version}.md`)) {
+    errors.push(`index.html must link to ./docs/stdlib-${version}.md`);
+  }
+
   const specPath = path.join(root, "docs", `calcdown-${version}.md`);
   const stdlibPath = path.join(root, "docs", `stdlib-${version}.md`);
   if (!(await fileExists(specPath))) errors.push(`Missing current spec: docs/calcdown-${version}.md`);
@@ -186,4 +194,3 @@ main().catch((err) => {
   process.stderr.write(`ERROR: ${err instanceof Error ? err.message : String(err)}\n`);
   process.exitCode = 1;
 });
-
