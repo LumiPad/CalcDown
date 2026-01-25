@@ -1,6 +1,6 @@
 # Demo — Agent Instructions
 
-Scope: `demo/**`.
+Scope: `demos/demo1/**`.
 
 This folder is a small, static browser demo for the CalcDown parser/evaluator scaffold.
 

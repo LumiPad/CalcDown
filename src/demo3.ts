@@ -88,7 +88,7 @@ function recompute(): void {
 }
 
 async function loadDefault(): Promise<void> {
-  const res = await fetch("../docs/examples/invoice.calc.md");
+  const res = await fetch(new URL("../docs/examples/invoice.calc.md", import.meta.url));
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   source.value = await res.text();
 }

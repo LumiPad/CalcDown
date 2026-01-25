@@ -77,7 +77,7 @@ async function recompute(): Promise<void> {
 }
 
 async function loadDefault(): Promise<void> {
-  const res = await fetch("../docs/examples/invoice-external.calc.md");
+  const res = await fetch(new URL("../docs/examples/invoice-external.calc.md", import.meta.url));
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   currentDocUrl = res.url;
   source.value = await res.text();
@@ -105,4 +105,3 @@ await loadDefault();
 renderInputsFromSource(source.value);
 setStatus("idle", "Loading external data…");
 await recompute();
-

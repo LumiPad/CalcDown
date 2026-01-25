@@ -24,7 +24,7 @@ function readChartMode(): ChartMode {
 
 async function loadDefault(): Promise<void> {
   try {
-    const res = await fetch("../docs/examples/mortgage.calc.md");
+    const res = await fetch(new URL("../docs/examples/mortgage.calc.md", import.meta.url));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     source.value = await res.text();
   } catch {
@@ -120,4 +120,3 @@ run.addEventListener("click", () => {
 
 await loadDefault();
 runOnce();
-

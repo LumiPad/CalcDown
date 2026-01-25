@@ -89,18 +89,20 @@ Early-stage: the spec is evolving, and the code here is a minimal, safety-first 
 ## Quickstart
 
 - Install deps: `make install`
-- Run the demos: `make demo` then open `http://localhost:5173/`
+- Run the demos: `make demo` then open `http://localhost:5173/demos/`
+- Copy/paste integration template: `http://localhost:5173/docs/integration-example.html`
 - Run typecheck/tests: `make check`
 - Run full deterministic verification: `make verify`
 
 ## Demos
 
-- Index: `http://localhost:5173/`
-- Demo 1: `http://localhost:5173/demo/` (scratchpad + simple charts)
-- Demo 2: `http://localhost:5173/demo2/` (inputs → cards view)
-- Demo 3: `http://localhost:5173/demo3/` (tabular data input + computed tables + layout)
-- Demo 4: `http://localhost:5173/demo4/` (browse examples; render cards/table/chart/layout)
-- Demo 5: `http://localhost:5173/demo5/` (external CSV/JSON `data.source` + SHA‑256 verification)
+- Index: `http://localhost:5173/demos/`
+- Demo 1: `http://localhost:5173/demos/demo1/` (scratchpad + simple charts)
+- Demo 2: `http://localhost:5173/demos/demo2/` (inputs → cards view)
+- Demo 3: `http://localhost:5173/demos/demo3/` (tabular data input + computed tables + layout)
+- Demo 4: `http://localhost:5173/demos/demo4/` (browse examples; render cards/table/chart/layout)
+- Demo 5: `http://localhost:5173/demos/demo5/` (external CSV/JSON `data.source` + SHA‑256 verification)
+- Integration example: `http://localhost:5173/docs/integration-example.html`
 
 ## Tooling (CLI-like)
 
@@ -119,6 +121,32 @@ The `make/*` targets wrap small scripts in `tools/`:
 
 ## Integrating (browser)
 
-The demos are now thin wrappers around `src/web/` (compiled to `dist/web/`), which is intended as the “integration layer” for embedding CalcDown in other tools (Markdown renderers, editor extensions, etc.).
+The demos are thin wrappers around `src/web/` (compiled to `dist/web/`), which is intended as the “integration layer” for embedding CalcDown in other tools (Markdown renderers, editor extensions, etc.).
+
+Fastest path: open `docs/integration-example.html` and copy it.
+
+Minimal embed (no bundler required):
+
+```html
+<div id="calcdown"></div>
+
+<!-- Optional: only needed if you want YAML `view` blocks -->
+<script type="importmap">
+  {
+    "imports": {
+      "js-yaml": "./node_modules/js-yaml/dist/js-yaml.mjs"
+    }
+  }
+</script>
+
+<script type="module">
+  import { installCalcdownStyles, mountCalcdown } from "./dist/web/index.js";
+
+  installCalcdownStyles();
+
+  const markdown = `---\ncalcdown: 0.8\n---\n\n\`\`\` calc\nconst x = 1 + 2;\n\`\`\``;
+  mountCalcdown(document.getElementById("calcdown"), markdown, { showMessages: true });
+</script>
+```
 
 Start here: `docs/integration.md`

@@ -31,10 +31,10 @@ let tableSchemas: TableSchemas = Object.create(null);
 let tableState: TableState = Object.create(null);
 
 const EXAMPLES: Record<string, string> = Object.freeze({
-  mortgage: "../docs/examples/mortgage.calc.md",
-  savings: "../docs/examples/savings.calc.md",
-  invoice: "../docs/examples/invoice.calc.md",
-  cashflow: "../docs/examples/simple-cashflow.calc.md",
+  mortgage: new URL("../docs/examples/mortgage.calc.md", import.meta.url).toString(),
+  savings: new URL("../docs/examples/savings.calc.md", import.meta.url).toString(),
+  invoice: new URL("../docs/examples/invoice.calc.md", import.meta.url).toString(),
+  cashflow: new URL("../docs/examples/simple-cashflow.calc.md", import.meta.url).toString(),
 });
 
 function readChartMode(): ChartMode {

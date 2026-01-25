@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CalcDown Demo 3</title>
+    <title>CalcDown Demo 5</title>
     <script type="importmap">
       {
         "imports": {
-          "js-yaml": "../node_modules/js-yaml/dist/js-yaml.mjs"
+          "js-yaml": "../../node_modules/js-yaml/dist/js-yaml.mjs"
         }
       }
     </script>
@@ -158,25 +158,39 @@
         position: sticky;
         top: 0;
       }
-      td input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 6px 8px;
-        border: 1px solid #d9dbe5;
-        border-radius: 8px;
-        font-size: 12px;
-        background: #fff;
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #e8eaf2;
+        border-radius: 999px;
+        padding: 6px 10px;
+        background: #f6f7fb;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #bbb;
+      }
+      .dot.ok {
+        background: #26a269;
+      }
+      .dot.err {
+        background: #d50b0b;
       }
     </style>
   </head>
   <body>
     <header>
-      <button id="run">Recompute</button>
+      <button id="run">Reload + Recompute</button>
       <label class="muted">
         <input id="live" type="checkbox" checked />
         Live (0.5s debounce)
       </label>
-      <span class="muted">Default: <code>docs/examples/invoice.calc.md</code></span>
+      <span id="status" class="status muted"><span class="dot"></span><span>Loading external data…</span></span>
+      <span class="muted"><a href="../">Demos index</a></span>
       <span class="muted">Source accepts JSON or YAML for <code>view</code> blocks.</span>
     </header>
 
@@ -201,6 +215,6 @@
       </div>
     </div>
 
-    <script type="module" src="../dist/demo3.js"></script>
+    <script type="module" src="../../dist/demo5.js"></script>
   </body>
 </html>
