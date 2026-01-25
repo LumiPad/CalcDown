@@ -1,6 +1,6 @@
 ---
 title: Invoice (CalcDown demo3)
-calcdown: 0.7
+calcdown: 0.8
 ---
 
 # Invoice

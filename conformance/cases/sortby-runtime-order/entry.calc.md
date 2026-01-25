@@ -1,6 +1,6 @@
 ---
 title: Conformance — data.sortBy
-calcdown: 0.7
+calcdown: 0.8
 ---
 
 # sortBy runtime ordering
@@ -21,4 +21,3 @@ columns:
 ``` calc
 const ids = t.id;
 ```
-

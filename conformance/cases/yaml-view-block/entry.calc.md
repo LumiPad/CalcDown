@@ -1,6 +1,6 @@
 ---
 title: Conformance — YAML view blocks
-calcdown: 0.7
+calcdown: 0.8
 ---
 
 # YAML view blocks
@@ -21,4 +21,3 @@ const total = 42;
       - key: total
         label: Total
 ```
-

@@ -19,10 +19,11 @@ function parseSimpleYaml(raw: string): Record<string, string> {
 export function extractFrontMatter(markdown: string): {
   frontMatter: FrontMatter | null;
   body: string;
+  bodyStartLine: number;
 } {
   const lines = markdown.split(/\r?\n/);
   if (lines.length === 0 || lines[0] !== "---") {
-    return { frontMatter: null, body: markdown };
+    return { frontMatter: null, body: markdown, bodyStartLine: 1 };
   }
 
   let end = -1;
@@ -33,7 +34,7 @@ export function extractFrontMatter(markdown: string): {
     }
   }
   if (end === -1) {
-    return { frontMatter: null, body: markdown };
+    return { frontMatter: null, body: markdown, bodyStartLine: 1 };
   }
 
   const raw = lines.slice(1, end).join("\n");
@@ -41,24 +42,43 @@ export function extractFrontMatter(markdown: string): {
   return {
     frontMatter: { raw, data: parseSimpleYaml(raw) },
     body,
+    bodyStartLine: end + 2,
   };
 }
 
-export function extractFencedCodeBlocks(markdownBody: string): FencedCodeBlock[] {
+function isClosingFenceLine(line: string, fence: string): boolean {
+  const trimmedLeft = line.trimStart();
+  if (!trimmedLeft) return false;
+  const fenceChar = fence[0];
+  if (!fenceChar) return false;
+  if (trimmedLeft[0] !== fenceChar) return false;
+
+  let count = 0;
+  while (count < trimmedLeft.length && trimmedLeft[count] === fenceChar) count++;
+  if (count < fence.length) return false;
+
+  for (let i = count; i < trimmedLeft.length; i++) {
+    const ch = trimmedLeft[i];
+    if (ch !== " " && ch !== "\t") return false;
+  }
+  return true;
+}
+
+export function extractFencedCodeBlocks(markdownBody: string, baseLine: number): FencedCodeBlock[] {
   const lines = markdownBody.split(/\r?\n/);
   const blocks: FencedCodeBlock[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line === undefined) continue;
-    const open = line.match(/^(\s*)(```+)(.*)$/);
+    const open = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
     if (!open) continue;
 
     const fence = open[2];
     if (!fence) continue;
     const info = (open[3] ?? "").trim();
     const lang = info.split(/\s+/)[0] ?? "";
-    const fenceLine = i + 1;
+    const fenceLine = baseLine + i;
 
     const contentLines: string[] = [];
     let closeFenceLine: number | undefined;
@@ -66,8 +86,8 @@ export function extractFencedCodeBlocks(markdownBody: string): FencedCodeBlock[]
     for (i = i + 1; i < lines.length; i++) {
       const l = lines[i];
       if (l === undefined) break;
-      if (l.startsWith(fence)) {
-        closeFenceLine = i + 1;
+      if (isClosingFenceLine(l, fence)) {
+        closeFenceLine = baseLine + i;
         break;
       }
       contentLines.push(l);
@@ -87,7 +107,7 @@ export function extractFencedCodeBlocks(markdownBody: string): FencedCodeBlock[]
 }
 
 export function parseCalcdownMarkdown(markdown: string): ParsedCalcdownMarkdown {
-  const { frontMatter, body } = extractFrontMatter(markdown);
-  const codeBlocks = extractFencedCodeBlocks(body);
+  const { frontMatter, body, bodyStartLine } = extractFrontMatter(markdown);
+  const codeBlocks = extractFencedCodeBlocks(body, bodyStartLine);
   return { frontMatter, body, codeBlocks };
 }

@@ -1,6 +1,6 @@
 ---
 title: Simple Mortgage (CalcDown example)
-calcdown: 0.7
+calcdown: 0.8
 ---
 
 # Mortgage calculator

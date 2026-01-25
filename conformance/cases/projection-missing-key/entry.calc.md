@@ -1,6 +1,6 @@
 ---
 title: Conformance — Projection missing key
-calcdown: 0.7
+calcdown: 0.8
 ---
 
 # Projection missing key
@@ -20,4 +20,3 @@ columns:
 ``` calc
 const bad = items.unit_price;
 ```
-

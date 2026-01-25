@@ -1,6 +1,6 @@
 ---
 title: Conformance — Vectorization + Projection
-calcdown: 0.7
+calcdown: 0.8
 ---
 
 # Vectorization + projection
@@ -50,4 +50,3 @@ const labels = std.text.concat("ID-", items.id);
   }
 ]
 ```
-

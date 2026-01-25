@@ -60,12 +60,18 @@ export interface DataTableSource {
   hash: string; // sha256:<hex>
 }
 
+export interface DataRowMapEntry {
+  primaryKey: string;
+  line: number; // 1-based line number in the source document
+}
+
 export interface DataTable {
   name: string;
   primaryKey: string;
   sortBy?: string;
   columns: Record<string, InputType>;
   rows: Record<string, unknown>[];
+  rowMap?: DataRowMapEntry[]; // inline JSONL only
   source?: DataTableSource;
   line: number;
 }

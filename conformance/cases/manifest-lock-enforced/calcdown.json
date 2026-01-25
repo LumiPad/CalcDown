@@ -1,6 +1,5 @@
 {
-  "calcdown": "0.7",
+  "calcdown": "0.8",
   "entry": "entry.calc.md",
   "lock": "calcdown.lock.json"
 }
-

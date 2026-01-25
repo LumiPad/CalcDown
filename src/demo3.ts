@@ -1,8 +1,9 @@
 import { evaluateProgram, parseProgram } from "./index.js";
-import { formatIsoDate, parseIsoDate } from "./util/date.js";
+import { formatIsoDate } from "./util/date.js";
 import { CalcdownMessage, DataTable } from "./types.js";
 import { validateViewsFromBlocks } from "./view_contract.js";
 import type { CalcdownView, LayoutItem, LayoutSpec, TableViewColumn } from "./view_contract.js";
+import { applyPatch, buildSourceMap, type PatchOp } from "./editor/patcher.js";
 
 const runEl = document.getElementById("run");
 const liveEl = document.getElementById("live");
@@ -28,20 +29,13 @@ const source = sourceEl;
 const DEBOUNCE_MS = 500;
 let debounceTimer: number | null = null;
 
-type OverrideValue = string | number | boolean;
-
-type TableState = Record<string, Record<string, unknown>[]>;
 type TableSchemas = Record<string, DataTable>;
 
-let tableState: TableState = Object.create(null);
 let tableSchemas: TableSchemas = Object.create(null);
+let editMessages: CalcdownMessage[] = [];
 
 function clear(el: HTMLElement): void {
   while (el.firstChild) el.removeChild(el.firstChild);
-}
-
-function deepCopyRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map((r) => Object.assign(Object.create(null), r));
 }
 
 function formatValue(v: unknown): string {
@@ -117,26 +111,6 @@ function formatFormattedValue(v: unknown, fmt: ValueFormat | undefined): string 
   return nf.format(v);
 }
 
-function readInputOverrides(): Record<string, OverrideValue> {
-  const out: Record<string, OverrideValue> = Object.create(null);
-  for (const el of Array.from(inputsRoot.querySelectorAll<HTMLInputElement>("input[data-name]"))) {
-    const name = el.dataset.name;
-    const kind = el.dataset.kind;
-    if (!name) continue;
-    if (kind === "boolean") {
-      out[name] = el.checked;
-      continue;
-    }
-    if (el.type === "date") {
-      if (el.value) out[name] = el.value;
-      continue;
-    }
-    const n = el.valueAsNumber;
-    if (Number.isFinite(n)) out[name] = n;
-  }
-  return out;
-}
-
 function desiredResultKeys(frontMatterResults: string | undefined): string[] | null {
   if (!frontMatterResults) return null;
   const list = frontMatterResults
@@ -144,6 +118,21 @@ function desiredResultKeys(frontMatterResults: string | undefined): string[] | n
     .map((s) => s.trim())
     .filter(Boolean);
   return list.length ? list : null;
+}
+
+function applyEditorPatch(op: PatchOp): void {
+  editMessages = [];
+  const parsed = parseProgram(source.value);
+  const map = buildSourceMap(parsed.program);
+  try {
+    source.value = applyPatch(source.value, op, map);
+  } catch (err) {
+    editMessages.push({
+      severity: "error",
+      code: "CD_EDITOR_PATCH",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 function renderInputsFromSource(markdown: string): void {
@@ -177,7 +166,26 @@ function renderInputsFromSource(markdown: string): void {
       input.value = typeof def.defaultValue === "number" ? String(def.defaultValue) : String(def.defaultValue);
     }
 
-    input.addEventListener("input", () => scheduleRecompute());
+    if (def.type.name === "boolean") {
+      input.addEventListener("change", () => {
+        applyEditorPatch({ kind: "updateInput", name: def.name, value: input.checked });
+        scheduleRecompute();
+      });
+    } else if (def.type.name === "date") {
+      input.addEventListener("input", () => {
+        if (!input.value) return;
+        applyEditorPatch({ kind: "updateInput", name: def.name, value: input.value });
+        scheduleRecompute();
+      });
+    } else {
+      input.addEventListener("input", () => {
+        const n = input.valueAsNumber;
+        if (!Number.isFinite(n)) return;
+        const value = def.type.name === "integer" ? Math.trunc(n) : n;
+        applyEditorPatch({ kind: "updateInput", name: def.name, value });
+        scheduleRecompute();
+      });
+    }
 
     field.appendChild(input);
     inputsRoot.appendChild(field);
@@ -186,11 +194,9 @@ function renderInputsFromSource(markdown: string): void {
 
 function resetTablesFromProgram(parsedTables: DataTable[]): void {
   tableSchemas = Object.create(null);
-  tableState = Object.create(null);
 
   for (const t of parsedTables) {
     tableSchemas[t.name] = t;
-    tableState[t.name] = deepCopyRows(t.rows);
   }
 }
 
@@ -262,16 +268,20 @@ function buildTableView(
 
   const schema = tableSchemas[sourceName];
   const schemaCols = schema?.columns ?? null;
+  const pkKey = schema?.primaryKey ?? null;
 
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex]!;
+    const pkRaw = pkKey ? row[pkKey] : undefined;
+    const pk =
+      typeof pkRaw === "string" ? pkRaw : typeof pkRaw === "number" && Number.isFinite(pkRaw) ? String(pkRaw) : null;
     const tr = document.createElement("tr");
 
     for (const c of columns) {
       const td = document.createElement("td");
       const value = Object.prototype.hasOwnProperty.call(row, c.key) ? row[c.key] : undefined;
 
-      if (editable && schemaCols && c.key in schemaCols) {
+      if (editable && pkKey && pk && schemaCols && c.key in schemaCols) {
         const type = schemaCols[c.key]!;
         const input = document.createElement("input");
 
@@ -283,7 +293,7 @@ function buildTableView(
             const next = Number(input.value);
             if (!Number.isFinite(next)) return;
             const nextValue = type.name === "integer" ? Math.trunc(next) : next;
-            tableState[sourceName]![rowIndex]![c.key] = nextValue;
+            applyEditorPatch({ kind: "updateTableCell", tableName: sourceName, primaryKey: pk, column: c.key, value: nextValue });
             scheduleRecompute();
           });
         } else if (type.name === "date") {
@@ -291,18 +301,14 @@ function buildTableView(
           input.value = value instanceof Date ? formatIsoDate(value) : typeof value === "string" ? value : "";
           input.addEventListener("input", () => {
             if (!input.value) return;
-            try {
-              tableState[sourceName]![rowIndex]![c.key] = parseIsoDate(input.value);
-              scheduleRecompute();
-            } catch {
-              // ignore invalid
-            }
+            applyEditorPatch({ kind: "updateTableCell", tableName: sourceName, primaryKey: pk, column: c.key, value: input.value });
+            scheduleRecompute();
           });
         } else {
           input.type = "text";
           input.value = typeof value === "string" ? value : value === undefined || value === null ? "" : String(value);
           input.addEventListener("input", () => {
-            tableState[sourceName]![rowIndex]![c.key] = input.value;
+            applyEditorPatch({ kind: "updateTableCell", tableName: sourceName, primaryKey: pk, column: c.key, value: input.value });
             scheduleRecompute();
           });
         }
@@ -399,7 +405,8 @@ function buildLayoutItem(item: LayoutItem, viewById: Map<string, CalcdownView>, 
       ...(c.format ? { format: c.format as ValueFormat } : {}),
     }));
 
-    const editable = target.spec.editable && sourceName in tableState && sourceName in tableSchemas;
+    const schema = tableSchemas[sourceName];
+    const editable = Boolean(target.spec.editable && schema && !schema.source && Array.isArray(schema.rowMap));
     const limit = target.spec.limit;
     const limitedRows = limit !== undefined ? rowObjs.slice(0, limit) : rowObjs;
     const title = target.spec.title ?? null;
@@ -412,13 +419,9 @@ function buildLayoutItem(item: LayoutItem, viewById: Map<string, CalcdownView>, 
 
 function recompute(): void {
   const parsed = parseProgram(source.value);
+  resetTablesFromProgram(parsed.program.tables);
 
-  if (Object.keys(tableSchemas).length === 0) {
-    resetTablesFromProgram(parsed.program.tables);
-  }
-
-  const overrides: Record<string, unknown> = Object.assign(Object.create(null), readInputOverrides(), tableState);
-  const evaluated = evaluateProgram(parsed.program, overrides);
+  const evaluated = evaluateProgram(parsed.program, {});
 
   clear(viewsRoot);
 
@@ -452,7 +455,7 @@ function recompute(): void {
       parseMessages: parsed.messages,
       evalMessages: evaluated.messages,
       viewMessages,
-      overrides,
+      editMessages,
     },
     null,
     2

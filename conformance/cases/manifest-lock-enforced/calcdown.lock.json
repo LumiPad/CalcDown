@@ -1,5 +1,5 @@
 {
-  "calcdown": "0.7",
+  "calcdown": "0.8",
   "entry": "conformance/cases/manifest-lock-enforced/entry.calc.md",
   "documents": [
     {
@@ -8,4 +8,3 @@
     }
   ]
 }
-

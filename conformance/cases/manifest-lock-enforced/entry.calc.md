@@ -1,6 +1,6 @@
 ---
 title: Conformance — Manifest lock enforcement
-calcdown: 0.7
+calcdown: 0.8
 ---
 
 # Manifest lock enforcement
@@ -23,4 +23,3 @@ const y = x + 1;
   "spec": { "items": [{ "key": "y", "label": "y" }] }
 }
 ```
-

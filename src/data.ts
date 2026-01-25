@@ -1,4 +1,4 @@
-import { CalcdownMessage, DataTable, FencedCodeBlock, InputType } from "./types.js";
+import { CalcdownMessage, DataRowMapEntry, DataTable, FencedCodeBlock, InputType } from "./types.js";
 import { parseIsoDate } from "./util/date.js";
 
 function parseType(raw: string): InputType {
@@ -430,12 +430,14 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
 
   const seenKeys = new Set<string>();
   const rows: Record<string, unknown>[] = [];
+  const rowMap: DataRowMapEntry[] = [];
 
   if (!sourceUri) {
     for (let i = 0; i < rowLines.length; i++) {
       const raw = rowLines[i] ?? "";
       const trimmed = raw.trim();
-      if (!trimmed) continue;
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const line = block.fenceLine + 1 + sepIdx + 1 + i;
 
       let parsed: unknown;
       try {
@@ -445,7 +447,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
           severity: "error",
           code: "CD_DATA_ROW_INVALID_JSON",
           message: err instanceof Error ? err.message : "Invalid JSON row",
-          line: block.fenceLine + 1 + sepIdx + 1 + i,
+          line,
           blockLang: block.lang,
           nodeName: tableName,
         });
@@ -457,7 +459,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
           severity: "error",
           code: "CD_DATA_ROW_NOT_OBJECT",
           message: "Data row must be a JSON object",
-          line: block.fenceLine + 1 + sepIdx + 1 + i,
+          line,
           blockLang: block.lang,
           nodeName: tableName,
         });
@@ -470,7 +472,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
           severity: "error",
           code: "CD_DATA_ROW_MISSING_PK",
           message: `Data row is missing primaryKey '${pk}'`,
-          line: block.fenceLine + 1 + sepIdx + 1 + i,
+          line,
           blockLang: block.lang,
           nodeName: tableName,
         });
@@ -484,7 +486,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
           severity: "error",
           code: "CD_DATA_PK_TYPE",
           message: `primaryKey '${pk}' must be a string or number`,
-          line: block.fenceLine + 1 + sepIdx + 1 + i,
+          line,
           blockLang: block.lang,
           nodeName: tableName,
         });
@@ -495,7 +497,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
           severity: "error",
           code: "CD_DATA_PK_DUPLICATE",
           message: `Duplicate primaryKey '${pkString}'`,
-          line: block.fenceLine + 1 + sepIdx + 1 + i,
+          line,
           blockLang: block.lang,
           nodeName: tableName,
         });
@@ -513,7 +515,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
               severity: "error",
               code: "CD_DATA_INVALID_VALUE",
               message: `Invalid value for column '${k}': ${err instanceof Error ? err.message : String(err)}`,
-              line: block.fenceLine + 1 + sepIdx + 1 + i,
+              line,
               blockLang: block.lang,
               nodeName: tableName,
             });
@@ -525,6 +527,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
       }
 
       rows.push(row);
+      rowMap.push({ primaryKey: pkString, line });
     }
   }
 
@@ -533,6 +536,7 @@ export function parseDataBlock(block: FencedCodeBlock): { table: DataTable | nul
     primaryKey: pk,
     columns,
     rows,
+    ...(!sourceUri ? { rowMap } : {}),
     ...(source ? { source } : {}),
     ...(sortBy ? { sortBy } : {}),
     line: block.fenceLine + 1,
