@@ -9,7 +9,7 @@ This repo provides a small, dependency-light “web integration” layer in `src
 ```ts
 import { runCalcdown } from "../dist/web/index.js";
 
-const markdown = `---\ncalcdown: 0.8\n---\n\n\`\`\`calc\nconst x = 1 + 2;\n\`\`\``;
+const markdown = `---\ncalcdown: 0.9\n---\n\n\`\`\`calc\nconst x = 1 + 2;\n\`\`\``;
 const res = runCalcdown(markdown);
 
 console.log(res.values.x); // 3
@@ -63,7 +63,7 @@ handle.destroy();
 
 If you provide `onEditTableCell`, CalcDown table views with `spec.editable: true` will render inputs and emit edit events.
 
-You are responsible for applying the edit to your own state (in-memory overrides, or the 0.8 patcher) and calling `handle.update(...)` again.
+You are responsible for applying the edit to your own state (in-memory overrides, or the 0.9 patcher) and calling `handle.update(...)` again.
 
 ## Inputs form helper
 

@@ -1,11 +1,10 @@
-# CalcDown Standard Library 0.6 (Draft)
+# CalcDown Standard Library 0.9
 
-**This draft is SUPERSEDED.**  
-Current version → [stdlib 0.9](stdlib-0.9.md) — [CalcDown 0.9](calcdown-0.9.md)
+Status: **Draft / experimental**. This document specifies the standard library object available as `std` when evaluating CalcScript expressions in CalcDown 0.9.
 
-Status: **Draft / experimental**. This document specifies the standard library object available as `std` when evaluating CalcScript expressions in CalcDown 0.6.
+CalcDown 0.9 does not change the standard library from 0.8.
 
-See also: `docs/calcdown-0.6.md` (the file format, project files, execution model, and tooling).
+See also: `docs/calcdown-0.9.md` (the file format, project files, execution model, and tooling).
 
 Goals:
 
@@ -19,7 +18,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are to be interpre
 
 ## 1) Conformance
 
-A CalcDown 0.6 engine MUST provide a `std` object with the **Core** APIs in §3.
+A CalcDown 0.9 engine MUST provide a `std` object with the **Core** APIs in §3.
 
 Engines MAY provide additional APIs in §4 (Recommended) and beyond, but MUST NOT expose unsafe capabilities (network, storage, timers, dynamic code loading).
 
@@ -162,6 +161,25 @@ Rules:
 
 - MUST throw if `x` is not a finite number.
 - MUST throw if the result is not a finite number.
+
+#### Additional scalar math (added in 0.7)
+
+The following functions MUST be provided:
+
+- `sin(x)`, `cos(x)`, `tan(x)`
+- `asin(x)`, `acos(x)`, `atan(x)`, `atan2(y, x)`
+- `sinh(x)`, `cosh(x)`, `tanh(x)`
+- `ceil(x)`, `floor(x)`, `trunc(x)`
+- `pow(base, exp)`
+
+Rules:
+
+- Each numeric argument MUST be a finite number.
+- The result MUST be a finite number.
+
+#### `std.math.E`
+
+A numeric constant equal to *e*.
 
 #### `std.math.PI`
 
@@ -490,9 +508,6 @@ Rules:
 - `std.finance.ipmt`, `std.finance.ppmt`
 - `std.date.range` and other calendar helpers
 
-## Appendix A) Changes from 0.5 → 0.6
+## Appendix A) Changes from 0.8 → 0.9
 
-- Add `std.date.now()` and `std.date.today()` (evaluation-context based).
-- Add `std.math.abs`, `std.math.sign`, `std.math.sqrt`, `std.math.exp`, `std.math.ln`, `std.math.log10`, and `std.math.PI`.
-- Add `std.text.concat(...)` and `std.text.repeat(...)`.
-- 0.6 otherwise focuses on project composition, lockfiles, and tooling in `docs/calcdown-0.6.md`.
+- No changes from 0.8.

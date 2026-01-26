@@ -1,13 +1,10 @@
-# CalcDown 0.8 (Draft Specification)
-
-**This draft is SUPERSEDED.**  
-Current version → [CalcDown 0.9](calcdown-0.9.md) — [stdlib 0.9](stdlib-0.9.md)
+# CalcDown 0.9 (Draft Specification)
 
 Status: **Draft / experimental**. CalcDown is a text-first, Git-friendly format for “spreadsheet-like” models: typed inputs and data, a deterministic compute graph, and declarative views.
 
-This document specifies **CalcDown 0.8**, focusing on the **Editor Protocol**: how tools map runtime objects back to source text and apply safe, minimal patches. The execution model, blocks, views, and standard library are unchanged from 0.7 unless stated otherwise.
+This document specifies **CalcDown 0.9**, focusing on **tooling and integration contracts** and the **Editor Protocol**: how tools map runtime objects back to source text and apply safe, minimal patches. The execution model, blocks, views, and standard library are unchanged from 0.7 unless stated otherwise.
 
-The companion standard library is specified in `docs/stdlib-0.8.md`.
+The companion standard library is specified in `docs/stdlib-0.9.md`.
 
 ## 0) Conventions
 
@@ -19,7 +16,7 @@ Line numbers in this spec are **1-based** (consistent with CalcDown messages).
 
 CalcDown 0.7 validates and evaluates a project (“Read → Eval → Print”).
 
-CalcDown 0.8 adds the missing half required for spreadsheet-like authoring:
+CalcDown 0.8 added the missing half required for spreadsheet-like authoring:
 
 - Render a grid/UI from text
 - Accept user edits (inputs, table cells)

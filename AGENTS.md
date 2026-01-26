@@ -44,6 +44,6 @@ These instructions apply to the whole repository unless a more specific `AGENTS.
 
 ## Documentation rules
 
-- Specs are versioned under `docs/` (e.g. `docs/calcdown-0.8.md`, `docs/stdlib-0.8.md`).
+- Specs are versioned under `docs/` (e.g. `docs/calcdown-0.9.md`, `docs/stdlib-0.9.md`).
 - Older versions stay **archived/superseded**, not rewritten.
 - Keep examples executable and consistent with the latest spec.

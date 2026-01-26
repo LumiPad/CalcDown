@@ -1,5 +1,5 @@
 ---
-calcdown: 0.8
+calcdown: 0.9
 title: YAML aliases disallowed (conformance)
 ---
 
@@ -18,4 +18,3 @@ This case ensures view-block YAML anchors/aliases are rejected deterministically
       - key: x
 - *v
 ```
-

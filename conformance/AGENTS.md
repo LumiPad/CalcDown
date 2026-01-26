@@ -38,7 +38,7 @@ Instead, update golden outputs deterministically with:
 
 The runner defaults to a fixed datetime (`--datetime 2026-01-24T00:00:00Z`) to keep `std.date.now/today` deterministic.
 
-## Current cases (as of CalcDown 0.8)
+## Current cases (as of CalcDown 0.9)
 
 - `vectorization-projection` — numeric vectorization + column projection behavior
 - `projection-missing-key` — projection error includes row index and message is stable

@@ -30,7 +30,7 @@ A CalcDown project is one or more Markdown documents (recommended extension: `.c
 - `calc` — CalcScript (sandboxed subset) defining computed nodes/tables
 - `view` — standardized, schema-validated views (`cards`, `table`, `chart`, `layout`)
 
-For multi-document projects, CalcDown 0.8 also defines:
+For multi-document projects, CalcDown 0.9 also defines:
 
 - `calcdown.json` — a project manifest (`entry`, optional `include`, optional `lock`)
 - `calcdown.lock.json` — a lockfile (document + external data hashes)
@@ -40,7 +40,7 @@ For multi-document projects, CalcDown 0.8 also defines:
 ````md
 ---
 title: Savings growth
-calcdown: 0.8
+calcdown: 0.9
 ---
 
 ``` inputs
@@ -74,12 +74,12 @@ const final_balance = std.data.last(balances);
 ## Docs
 
 - `PURPOSE.md` — project goals and thesis
-- `docs/calcdown-0.8.md` — **current** file format + editor protocol
-- `docs/stdlib-0.8.md` — **current** standard library
+- `docs/calcdown-0.9.md` — **current** file format + editor protocol
+- `docs/stdlib-0.9.md` — **current** standard library
 - `docs/integration.md` — embedding CalcDown in other tools
 - `docs/integration-example.html` — copy/paste integration template
 - `docs/examples/*.calc.md` — executable examples (use latest spec)
-- Archived drafts: `docs/calcdown-0.[1234567].md`, `docs/stdlib-0.[1234567].md`
+- Archived drafts: `docs/calcdown-0.[12345678].md`, `docs/stdlib-0.[12345678].md`
 - Agent guidance: `AGENTS.md` (plus scoped files in subfolders)
 
 ## Status
@@ -144,7 +144,7 @@ Minimal embed (no bundler required):
 
   installCalcdownStyles();
 
-  const markdown = `---\ncalcdown: 0.8\n---\n\n\`\`\` calc\nconst x = 1 + 2;\n\`\`\``;
+  const markdown = `---\ncalcdown: 0.9\n---\n\n\`\`\` calc\nconst x = 1 + 2;\n\`\`\``;
   mountCalcdown(document.getElementById("calcdown"), markdown, { showMessages: true });
 </script>
 ```

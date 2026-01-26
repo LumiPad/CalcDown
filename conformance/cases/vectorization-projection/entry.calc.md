@@ -1,6 +1,6 @@
 ---
 title: Conformance — Vectorization + Projection
-calcdown: 0.8
+calcdown: 0.9
 ---
 
 # Vectorization + projection
