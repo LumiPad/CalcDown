@@ -66,7 +66,9 @@ export function formatFormattedValue(v: unknown, fmt: ValueFormat | undefined): 
     const nf = new Intl.NumberFormat(undefined, {
       style: "currency",
       currency,
-      maximumFractionDigits: digits ?? 2,
+      ...(digits !== undefined
+        ? { minimumFractionDigits: digits, maximumFractionDigits: digits }
+        : {}),
     });
     return nf.format(v);
   }

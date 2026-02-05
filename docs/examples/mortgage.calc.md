@@ -5,7 +5,7 @@ calcdown: 0.9
 
 # Mortgage calculator
 
-## Inputs
+%% Inputs
 
 ``` inputs
 loan_amount   : currency(USD) = 300000
@@ -14,7 +14,7 @@ term_years    : integer       = 30
 start_date    : date          = 2024-01-01
 ```
 
-## Logic
+%% Logic
 
 ``` calc
 const total_months = term_years * 12;
@@ -41,7 +41,7 @@ const schedule = std.data.scan(
 Monthly payment: `{{ payment }}`
 Total interest: `{{ total_interest }}`
 
-## View
+%% View
 
 ``` view
 {

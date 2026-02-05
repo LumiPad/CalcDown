@@ -38,7 +38,7 @@
       }
       .grid {
         display: grid;
-        grid-template-columns: 380px 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 16px;
         align-items: start;
       }
@@ -48,7 +48,7 @@
         background: #fff;
         padding: 12px;
       }
-      .panel h2 {
+      .panel > h2 {
         font-size: 14px;
         margin: 0 0 10px 0;
       }
@@ -183,17 +183,12 @@
 
     <div class="grid">
       <div class="panel">
-        <h2>Inputs</h2>
-        <div id="inputs" class="inputs"></div>
-
-        <details>
-          <summary>Source</summary>
-          <textarea id="source" spellcheck="false"></textarea>
-        </details>
+        <h2>Source</h2>
+        <textarea id="source" spellcheck="false"></textarea>
       </div>
 
       <div class="panel">
-        <h2>View</h2>
+        <h2>Preview</h2>
         <div id="views" class="views"></div>
         <details>
           <summary>Messages</summary>

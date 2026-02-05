@@ -25,6 +25,23 @@ test("formatFormattedValue: percent01 formats ratio values", () => {
   assert.match(out, /^\p{Number}{2}%$/u);
 });
 
+test("formatFormattedValue: currency uses Intl defaults when digits omitted", () => {
+  const expected = new Intl.NumberFormat(undefined, { style: "currency", currency: "ISK" }).format(1234.5);
+  const out = formatFormattedValue(1234.5, { kind: "currency", currency: "ISK" });
+  assert.equal(out, expected);
+});
+
+test("formatFormattedValue: currency digits override uses fixed fraction digits", () => {
+  const expected = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(12.34);
+  const out = formatFormattedValue(12.34, { kind: "currency", currency: "USD", digits: 0 });
+  assert.equal(out, expected);
+});
+
 test("view formats accept percent01 and percent scale", () => {
   const markdown =
     `---\ncalcdown: 0.9\n---\n\n` +
@@ -51,3 +68,25 @@ test("view formats accept percent01 and percent scale", () => {
   assert.deepEqual(validated.messages, []);
 });
 
+test("view formats accept currency kind without currency (inferred)", () => {
+  const markdown =
+    `---\ncalcdown: 0.9\n---\n\n` +
+    "```view\n" +
+    JSON.stringify(
+      {
+        id: "v",
+        type: "cards",
+        library: "calcdown",
+        spec: {
+          items: [{ key: "a", format: { kind: "currency", digits: 2 } }],
+        },
+      },
+      null,
+      2
+    ) +
+    "\n```\n";
+
+  const parsed = parseProgram(markdown);
+  const validated = validateViewsFromBlocks(parsed.program.blocks);
+  assert.deepEqual(validated.messages, []);
+});

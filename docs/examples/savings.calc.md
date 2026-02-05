@@ -7,7 +7,7 @@ calcdown: 0.9
 
 Play with the inputs to see how contributions and return rate affect the outcome.
 
-## Inputs
+%% Inputs
 
 ``` inputs
 initial_balance      : number  = 10000
@@ -16,7 +16,7 @@ annual_return        : percent = 6.0
 years                : integer = 20
 ```
 
-## Logic
+%% Logic
 
 ``` calc
 const months = years * 12;
@@ -36,7 +36,7 @@ const total_contributions = monthly_contribution * months;
 const interest_earned = final_balance - initial_balance - total_contributions;
 ```
 
-## View
+%% View
 
 ``` view
 {

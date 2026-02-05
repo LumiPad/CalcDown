@@ -1,15 +1,51 @@
 import { CalcdownMessage, DataRowMapEntry, DataTable, FencedCodeBlock, InputType } from "./types.js";
 import { parseIsoDate } from "./util/date.js";
 
+const coreTypes = new Set(["string", "boolean", "number", "integer", "decimal", "percent", "currency", "date", "datetime"]);
+
+function normalizeTypeName(name: string): string {
+  const trimmed = name.trim();
+  const lower = trimmed.toLowerCase();
+  return coreTypes.has(lower) ? lower : trimmed;
+}
+
+function normalizeTypeArgs(typeName: string, args: string[]): string[] {
+  if (typeName !== "currency" || args.length === 0) return args;
+  const first = args[0] ?? "";
+  const quoted = first.match(/^"(.*)"$/) ?? first.match(/^'(.*)'$/);
+  const unquoted = quoted ? (quoted[1] ?? "") : first;
+  args[0] = unquoted.trim().toUpperCase();
+  return args;
+}
+
 function parseType(raw: string): InputType {
   const trimmed = raw.trim();
-  const open = trimmed.indexOf("(");
-  if (open === -1) return { name: trimmed, args: [], raw: trimmed };
-  const close = trimmed.lastIndexOf(")");
-  if (close === -1 || close < open) return { name: trimmed, args: [], raw: trimmed };
-  const name = trimmed.slice(0, open).trim();
+  const openParen = trimmed.indexOf("(");
+  const openBracket = trimmed.indexOf("[");
+  if (openParen === -1 && openBracket === -1) {
+    const name = normalizeTypeName(trimmed);
+    return { name, args: [], raw: trimmed };
+  }
+
+  let open = openParen;
+  let closeChar: ")" | "]" = ")";
+  if (openBracket !== -1 && (openParen === -1 || openBracket < openParen)) {
+    open = openBracket;
+    closeChar = "]";
+  }
+
+  const close = trimmed.lastIndexOf(closeChar);
+  if (close === -1 || close < open) {
+    const name = normalizeTypeName(trimmed);
+    return { name, args: [], raw: trimmed };
+  }
+
+  const name = normalizeTypeName(trimmed.slice(0, open));
   const argsText = trimmed.slice(open + 1, close).trim();
-  const args = argsText ? argsText.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const args = normalizeTypeArgs(
+    name,
+    argsText ? argsText.split(",").map((s) => s.trim()).filter(Boolean) : []
+  );
   return { name, args, raw: trimmed };
 }
 

@@ -38,6 +38,9 @@ Many CalcDown views accept a `format` for values.
 
 - `format: "percent"` formats numbers as **percent points** (e.g. `14.77` → `14.77%`).
 - For **ratio** percentages (`0..1`), use `format: "percent01"` (e.g. `0.1477` → `14.77%`) or `format: { kind: "percent", scale: 100 }`.
+- For currency formatting, use `format: { kind: "currency", currency: "USD" }` (explicit), or in the built-in web renderer use `format: "currency"` / `format: { kind: "currency" }` to infer the ISO code from declared CalcDown types.
+
+Note: in the built-in web renderer, `format: "currency"` will try to infer the ISO currency code from declared CalcDown types (e.g. `Currency[USD]`) and propagate it through common derived expressions (arithmetic, `std.math.sum`, `std.table.map` outputs). If it can’t infer a code, it falls back to plain number formatting.
 
 ## Styling (optional)
 
@@ -48,6 +51,37 @@ import { installCalcdownStyles } from "../dist/web/index.js";
 
 installCalcdownStyles();
 ```
+
+The default stylesheet is scoped under `.calcdown-root` (so it should not leak onto the rest of your page). `mountCalcdown(...)` and `mountCalcdownDocument(...)` create this wrapper automatically. If you call `renderCalcdownViews(...)` directly, wrap your container:
+
+```html
+<div class="calcdown-root">
+  <div id="views"></div>
+</div>
+```
+
+### Theming via CSS variables
+
+The default stylesheet uses CSS custom properties (theme tokens) defined on `.calcdown-root`. Override these to match your site’s theme without rewriting selectors:
+
+```css
+.calcdown-root {
+  --calcdown-font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --calcdown-text: #0f172a;
+  --calcdown-muted: #64748b;
+  --calcdown-surface: #ffffff;
+  --calcdown-view-bg: #fbfcff;
+  --calcdown-border: #e2e8f0;
+  --calcdown-border-strong: #cbd5e1;
+  --calcdown-code-inline-bg: #f6f7fb;
+  --calcdown-radius: 12px;
+
+  /* Document rendering (`mountCalcdownDocument`) */
+  --calcdown-doc-max-width: 980px; /* set to 100% for full-width */
+}
+```
+
+If you want full control, don’t call `installCalcdownStyles()` and provide your own CSS targeting the emitted class names. (For reference, the shipped CSS string is exported as `CALCDOWN_BASE_CSS`.)
 
 ## Markdown-extension style (mount + cleanup)
 
@@ -77,6 +111,11 @@ mountCalcdownDocument(el, markdown, { showMessages: false });
 ```
 
 Optional: pass `{ showSourceBlocks: true }` to also render `data` and `calc` blocks as code.
+
+Note: the built-in narrative renderer is intentionally small (headings/paragraphs/lists/links/inline code) and treats these as “invisible” comments:
+
+- Lines whose first non-whitespace characters are `%%` (Mermaid-style line comments)
+- HTML comments `<!-- ... -->` (including multi-line)
 
 ## Table editing (optional)
 

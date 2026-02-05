@@ -734,3 +734,4 @@ export function evaluateProgram(
 }
 
 export { createStd, std };
+export { inferCalcdownTypes } from "./infer_types.js";

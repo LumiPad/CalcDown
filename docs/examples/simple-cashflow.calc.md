@@ -11,13 +11,13 @@ This example demonstrates:
 - **Tabular output** via a computed table node (`schedule`)
 - A running balance computed with `std.data.scan`
 
-## Inputs
+%% Inputs
 
 ``` inputs
 starting_balance : number = 2500
 ```
 
-## Data
+%% Data
 
 ``` data
 name: cashflow
@@ -34,7 +34,7 @@ columns:
 {"id":"m3","inflow":3200,"month":"2024-03-01","outflow":3100}
 ```
 
-## Calc
+%% Calc
 
 ``` calc
 const months = cashflow.length;
@@ -59,7 +59,7 @@ const schedule = std.data.scan(
 const ending_balance = std.data.last(schedule).closing_balance;
 ```
 
-## View
+%% View
 
 ``` view
 [

@@ -47,7 +47,8 @@ function formatInputsBlock(content) {
   let maxName = 0;
   let maxType = 0;
 
-  const inputRe = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?)\s*=\s*(.+)$/;
+  const inputRe =
+    /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\)|\[[^\]]*\])?)\s*=\s*(.+)$/;
 
   for (const line of lines) {
     const raw = line ?? "";

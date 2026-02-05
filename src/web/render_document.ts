@@ -1,6 +1,6 @@
 import { parseInputsBlock } from "../inputs.js";
 import { extractFrontMatter } from "../markdown.js";
-import type { CalcdownMessage, DataTable, FencedCodeBlock } from "../types.js";
+import type { CalcdownMessage, DataTable, FencedCodeBlock, InputType } from "../types.js";
 import type { CalcdownView, LayoutItem } from "../view_contract.js";
 import { parseViewBlock } from "../views.js";
 import type { CalcdownRunResult } from "./run.js";
@@ -20,6 +20,7 @@ export interface RenderCalcdownDocumentOptions {
   run: CalcdownRunResult;
   chartMode?: ChartMode;
   tableSchemas?: Record<string, DataTable>;
+  valueTypes?: Record<string, InputType>;
   overrides?: Record<string, unknown>;
   onInputChange?: (ev: InputChangeEvent) => void;
   onEditTableCell?: (ev: TableEditEvent) => void;
@@ -204,6 +205,7 @@ export function renderCalcdownDocument(opts: RenderCalcdownDocumentOptions): Cal
           values: opts.run.values,
           ...(opts.chartMode ? { chartMode: opts.chartMode } : {}),
           ...(opts.tableSchemas ? { tableSchemas: opts.tableSchemas } : {}),
+          ...(opts.valueTypes ? { valueTypes: opts.valueTypes } : {}),
           ...(opts.onEditTableCell ? { onEditTableCell: opts.onEditTableCell } : {}),
         });
       }
@@ -230,7 +232,12 @@ export function renderCalcdownDocument(opts: RenderCalcdownDocumentOptions): Cal
 export function updateCalcdownDocumentViews(
   state: CalcdownDocumentState,
   run: CalcdownRunResult,
-  opts: { chartMode?: ChartMode; tableSchemas?: Record<string, DataTable>; onEditTableCell?: (ev: TableEditEvent) => void }
+  opts: {
+    chartMode?: ChartMode;
+    tableSchemas?: Record<string, DataTable>;
+    valueTypes?: Record<string, InputType>;
+    onEditTableCell?: (ev: TableEditEvent) => void;
+  }
 ): { messages: CalcdownMessage[] } {
   for (const slot of state.viewSlots) {
     if (slot.renderIds.length === 0) continue;
@@ -241,6 +248,7 @@ export function updateCalcdownDocumentViews(
       values: run.values,
       ...(opts.chartMode ? { chartMode: opts.chartMode } : {}),
       ...(opts.tableSchemas ? { tableSchemas: opts.tableSchemas } : {}),
+      ...(opts.valueTypes ? { valueTypes: opts.valueTypes } : {}),
       ...(opts.onEditTableCell ? { onEditTableCell: opts.onEditTableCell } : {}),
     });
   }

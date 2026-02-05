@@ -1,4 +1,4 @@
-import type { DataTable } from "../types.js";
+import type { DataTable, InputType } from "../types.js";
 import { defaultLabelForKey, type CalcdownView, type LayoutItem, type LayoutSpec, type TableViewColumn, type ValueFormat } from "../view_contract.js";
 import { formatFormattedValue } from "./format.js";
 import { buildBarChartCard, buildLineChartCard, type ChartCardClasses, type ChartSeriesSpec } from "./charts.js";
@@ -18,6 +18,7 @@ export interface RenderViewsOptions {
   values: Record<string, unknown>;
   chartMode?: ChartMode;
   tableSchemas?: Record<string, DataTable>;
+  valueTypes?: Record<string, InputType>;
   onEditTableCell?: (ev: TableEditEvent) => void;
 }
 
@@ -28,6 +29,7 @@ export interface RenderInlineViewsOptions {
   values: Record<string, unknown>;
   chartMode?: ChartMode;
   tableSchemas?: Record<string, DataTable>;
+  valueTypes?: Record<string, InputType>;
   onEditTableCell?: (ev: TableEditEvent) => void;
 }
 
@@ -42,7 +44,64 @@ function viewTitle(title: string): HTMLDivElement {
   return h;
 }
 
-function buildCardsView(title: string | null, items: { key: string; label: string; format?: ValueFormat }[], values: Record<string, unknown>): HTMLElement {
+const CURRENCY_HEADER_HINT_CACHE = new Map<string, string>();
+
+function currencyHeaderHint(codeRaw: string): string {
+  const code = codeRaw.trim().toUpperCase();
+  if (!code) return "";
+  const cached = CURRENCY_HEADER_HINT_CACHE.get(code);
+  if (cached !== undefined) return cached;
+
+  let hint = code;
+  try {
+    const nf = new Intl.NumberFormat(undefined, { style: "currency", currency: code, currencyDisplay: "symbol" });
+    const currencyPart = nf.formatToParts(0).find((p) => p.type === "currency")?.value;
+    if (currencyPart && currencyPart.trim()) hint = currencyPart.trim();
+  } catch {
+    // Ignore Intl errors; fall back to the ISO code.
+  }
+
+  // Avoid ambiguous "$" without a country prefix in common locales.
+  if (hint === "$") hint = code === "USD" ? "US$" : code;
+
+  CURRENCY_HEADER_HINT_CACHE.set(code, hint);
+  return hint;
+}
+
+function resolveCurrencyFormatFromType(t: InputType | undefined): ValueFormat | null {
+  if (!t) return null;
+  if (t.name !== "currency") return null;
+  const code = t.args[0];
+  if (!code || !code.trim()) return null;
+  return { kind: "currency", currency: code.trim() } satisfies ValueFormat;
+}
+
+function resolveFormat(raw: ValueFormat | undefined, inferredFrom: InputType | undefined): ValueFormat | undefined {
+  if (!raw) return inferredFormatForType(inferredFrom);
+  if (raw === "currency") {
+    const resolved = resolveCurrencyFormatFromType(inferredFrom);
+    return resolved ?? raw;
+  }
+  if (typeof raw === "object" && raw.kind === "currency" && !raw.currency) {
+    const resolved = resolveCurrencyFormatFromType(inferredFrom);
+    if (resolved && typeof resolved === "object") {
+      const digits = typeof raw.digits === "number" && Number.isFinite(raw.digits) ? raw.digits : undefined;
+      return Object.assign(Object.create(null), {
+        kind: "currency",
+        currency: resolved.currency,
+        ...(digits !== undefined ? { digits } : {}),
+      }) as ValueFormat;
+    }
+  }
+  return raw;
+}
+
+function buildCardsView(
+  title: string | null,
+  items: { key: string; label: string; format?: ValueFormat }[],
+  values: Record<string, unknown>,
+  valueTypes: Record<string, InputType> | undefined
+): HTMLElement {
   const view = document.createElement("div");
   view.className = "view";
 
@@ -60,7 +119,8 @@ function buildCardsView(title: string | null, items: { key: string; label: strin
 
     const v = document.createElement("div");
     v.className = "v";
-    v.textContent = formatFormattedValue(values[item.key], item.format);
+    const fmt = resolveFormat(item.format, valueTypes ? valueTypes[item.key] : undefined);
+    v.textContent = formatFormattedValue(values[item.key], fmt);
 
     card.appendChild(k);
     card.appendChild(v);
@@ -107,21 +167,32 @@ function buildTableView(
   view.className = "view";
   if (title) view.appendChild(viewTitle(title));
 
+  const schemaCols = opts.schema?.columns ?? null;
+  const pkKey = opts.schema?.primaryKey ?? null;
+
   const table = document.createElement("table");
   const thead = document.createElement("thead");
   const trh = document.createElement("tr");
   for (const c of columns) {
     const th = document.createElement("th");
-    th.textContent = c.label;
+    let label = c.label;
+    if (opts.editable && schemaCols) {
+      const t = schemaCols[c.key];
+      if (t?.name === "currency") {
+        const code = t.args[0];
+        if (code && code.trim()) {
+          const hint = currencyHeaderHint(code);
+          if (hint) label = `${label} (${hint})`;
+        }
+      }
+    }
+    th.textContent = label;
     trh.appendChild(th);
   }
   thead.appendChild(trh);
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
-
-  const schemaCols = opts.schema?.columns ?? null;
-  const pkKey = opts.schema?.primaryKey ?? null;
 
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex]!;
@@ -217,7 +288,13 @@ function buildMissingView(ref: string): HTMLElement {
 function buildLayoutItem(
   item: LayoutItem,
   viewById: Map<string, CalcdownView>,
-  ctx: { values: Record<string, unknown>; chartMode: ChartMode; schemas?: Record<string, DataTable>; onEditTableCell?: (ev: TableEditEvent) => void }
+  ctx: {
+    values: Record<string, unknown>;
+    chartMode: ChartMode;
+    schemas?: Record<string, DataTable>;
+    valueTypes?: Record<string, InputType>;
+    onEditTableCell?: (ev: TableEditEvent) => void;
+  }
 ): HTMLElement | null {
   if (item.kind === "layout") return buildLayout(item.spec, viewById, ctx);
 
@@ -231,7 +308,7 @@ function buildLayoutItem(
       label: it.label,
       ...(it.format ? { format: it.format as ValueFormat } : {}),
     }));
-    return buildCardsView(title, items, ctx.values);
+    return buildCardsView(title, items, ctx.values, ctx.valueTypes);
   }
 
   if (target.type === "table") {
@@ -244,7 +321,8 @@ function buildLayoutItem(
     const schemaCols = schema?.columns ?? null;
 
     const cols = (target.spec.columns && target.spec.columns.length ? target.spec.columns : defaultColumnsForSource(sourceName, rowObjs, ctx.schemas)).map((c) => {
-      const fmt = c.format ? (c.format as ValueFormat) : schemaCols ? inferredFormatForType(schemaCols[c.key]) : undefined;
+      const fmtRaw = c.format ? (c.format as ValueFormat) : undefined;
+      const fmt = resolveFormat(fmtRaw, schemaCols ? schemaCols[c.key] : undefined);
       return Object.assign(Object.create(null), { key: c.key, label: c.label }, fmt ? { format: fmt } : {});
     });
 
@@ -272,7 +350,8 @@ function buildLayoutItem(
     const schemaCols = schema?.columns ?? null;
 
     const series: ChartSeriesSpec[] = ySpecs.map((s) => {
-      const fmt = s.format ? (s.format as ValueFormat) : schemaCols ? inferredFormatForType(schemaCols[s.key]) : undefined;
+      const fmtRaw = s.format ? (s.format as ValueFormat) : undefined;
+      const fmt = resolveFormat(fmtRaw, schemaCols ? schemaCols[s.key] : undefined);
       return Object.assign(Object.create(null), { key: s.key, label: s.label }, fmt ? { format: fmt } : {});
     });
     const title = target.spec.title ?? target.id;
@@ -282,11 +361,10 @@ function buildLayoutItem(
       mark === "line" ? `${sourceName}.${ySummary} over ${xField}` : `${sourceName}.${ySummary} by ${xField}`;
 
     const classes: Partial<ChartCardClasses> = Object.assign(Object.create(null), { container: "view", title: "view-title", subtitle: "muted" });
-    const xFormat = target.spec.x.format
-      ? (target.spec.x.format as ValueFormat)
-      : schemaCols
-        ? inferredFormatForType(schemaCols[xField])
-        : undefined;
+    const xFormat = resolveFormat(
+      target.spec.x.format ? (target.spec.x.format as ValueFormat) : undefined,
+      schemaCols ? schemaCols[xField] : undefined
+    );
 
     const chartOpts = {
       title,
@@ -320,9 +398,11 @@ export function renderCalcdownViews(opts: RenderViewsOptions): void {
     values: Record<string, unknown>;
     chartMode: ChartMode;
     schemas?: Record<string, DataTable>;
+    valueTypes?: Record<string, InputType>;
     onEditTableCell?: (ev: TableEditEvent) => void;
   } = { values: opts.values, chartMode };
   if (opts.tableSchemas) ctx.schemas = opts.tableSchemas;
+  if (opts.valueTypes) ctx.valueTypes = opts.valueTypes;
   if (opts.onEditTableCell) ctx.onEditTableCell = opts.onEditTableCell;
 
   if (rootLayout && rootLayout.type === "layout") {
@@ -348,9 +428,11 @@ export function renderCalcdownViewsInline(opts: RenderInlineViewsOptions): void 
     values: Record<string, unknown>;
     chartMode: ChartMode;
     schemas?: Record<string, DataTable>;
+    valueTypes?: Record<string, InputType>;
     onEditTableCell?: (ev: TableEditEvent) => void;
   } = { values: opts.values, chartMode };
   if (opts.tableSchemas) ctx.schemas = opts.tableSchemas;
+  if (opts.valueTypes) ctx.valueTypes = opts.valueTypes;
   if (opts.onEditTableCell) ctx.onEditTableCell = opts.onEditTableCell;
 
   for (const id of opts.render) {

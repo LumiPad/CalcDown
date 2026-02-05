@@ -10,6 +10,80 @@ function isHrLine(line: string): boolean {
   return count >= 3;
 }
 
+function isEscaped(src: string, index: number): boolean {
+  // Markdown-style escaping: a character is escaped if preceded by an odd number of backslashes.
+  let slashes = 0;
+  for (let i = index - 1; i >= 0 && src[i] === "\\"; i--) slashes++;
+  return slashes % 2 === 1;
+}
+
+function stripHtmlCommentsPreserveNewlinesAndCodeSpans(markdown: string): string {
+  let out = "";
+  let inComment = false;
+
+  for (let i = 0; i < markdown.length; i++) {
+    if (inComment) {
+      if (markdown.startsWith("-->", i)) {
+        inComment = false;
+        i += 2;
+        continue;
+      }
+      const ch = markdown[i]!;
+      if (ch === "\n" || ch === "\r") out += ch;
+      continue;
+    }
+
+    if (markdown.startsWith("<!--", i) && !isEscaped(markdown, i)) {
+      inComment = true;
+      i += 3;
+      continue;
+    }
+
+    const ch = markdown[i]!;
+    if (ch === "`" && !isEscaped(markdown, i)) {
+      // Preserve inline code spans verbatim so we don't strip comment-like text inside them.
+      const lineEnd = markdown.indexOf("\n", i + 1);
+      const searchEnd = lineEnd === -1 ? markdown.length : lineEnd;
+      const close = markdown.indexOf("`", i + 1);
+      if (close !== -1 && close < searchEnd) {
+        out += markdown.slice(i, close + 1);
+        i = close;
+        continue;
+      }
+    }
+
+    out += ch;
+  }
+
+  return out;
+}
+
+export function stripNarrativeComments(markdown: string): string {
+  const strippedHtml = stripHtmlCommentsPreserveNewlinesAndCodeSpans(markdown);
+  const originalLines = markdown.split(/\r?\n/);
+  const strippedLines = strippedHtml.split(/\r?\n/);
+
+  const out: string[] = [];
+  const n = Math.max(originalLines.length, strippedLines.length);
+  for (let i = 0; i < n; i++) {
+    const original = originalLines[i] ?? "";
+    const stripped = strippedLines[i] ?? "";
+
+    const trimmedStart = stripped.trimStart();
+    if (trimmedStart.startsWith("%%")) continue;
+
+    if (!trimmedStart.trim()) {
+      // Keep genuine blank lines, but drop lines that became blank after stripping HTML comments.
+      if (!original.trim()) out.push("");
+      continue;
+    }
+
+    out.push(stripped);
+  }
+
+  return out.join("\n");
+}
+
 function nextSpecialIndex(text: string, start: number): number {
   for (let i = start; i < text.length; i++) {
     const ch = text[i]!;
@@ -144,7 +218,8 @@ function lineIsListItem(t: string): { kind: "ul" | "ol"; text: string } | null {
 }
 
 export function renderMarkdownText(container: HTMLElement, markdown: string): void {
-  const lines = markdown.split(/\r?\n/);
+  const cleaned = stripNarrativeComments(markdown);
+  const lines = cleaned.split(/\r?\n/);
   let i = 0;
 
   while (i < lines.length) {

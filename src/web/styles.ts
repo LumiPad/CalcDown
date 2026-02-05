@@ -2,31 +2,51 @@ const STYLE_ID = "calcdown-styles";
 
 export const CALCDOWN_BASE_CSS = `
 .calcdown-root {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: #111428;
+  --calcdown-font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --calcdown-text: #111428;
+  --calcdown-muted: #6a718a;
+  --calcdown-label: #333;
+  --calcdown-surface: #fff;
+  --calcdown-view-bg: #fbfcff;
+  --calcdown-border: #e8eaf2;
+  --calcdown-border-strong: #d9dbe5;
+  --calcdown-code-inline-bg: #f6f7fb;
+  --calcdown-messages-bg: #0b1020;
+  --calcdown-messages-text: #e7ebff;
+  --calcdown-radius: 12px;
+  --calcdown-radius-md: 10px;
+  --calcdown-radius-sm: 8px;
+  --calcdown-radius-xs: 6px;
+  --calcdown-doc-max-width: 980px;
+
+  font-family: var(--calcdown-font-family);
+  color: var(--calcdown-text);
 }
 
 .calcdown-root .muted {
-  color: #6a718a;
+  color: var(--calcdown-muted);
   font-size: 12px;
 }
 
 .calcdown-root .view {
-  border: 1px solid #e8eaf2;
-  border-radius: 12px;
-  background: #fbfcff;
+  border: 1px solid var(--calcdown-border);
+  border-radius: var(--calcdown-radius);
+  background: var(--calcdown-view-bg);
   padding: 12px;
 }
 
 .calcdown-root .view-title {
   font-size: 12px;
-  color: #6a718a;
+  color: var(--calcdown-muted);
   margin: 0 0 10px 0;
 }
 
 .calcdown-root .calcdown-doc {
   display: grid;
   gap: 12px;
+  width: 100%;
+  max-width: min(100%, var(--calcdown-doc-max-width));
+  margin: 0 auto;
 }
 
 .calcdown-root .calcdown-md {
@@ -54,16 +74,16 @@ export const CALCDOWN_BASE_CSS = `
 
 .calcdown-root .calcdown-md hr {
   border: 0;
-  border-top: 1px solid #e8eaf2;
+  border-top: 1px solid var(--calcdown-border);
   margin: 16px 0;
 }
 
 .calcdown-root .calcdown-md code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.95em;
-  background: #f6f7fb;
-  border: 1px solid #e8eaf2;
-  border-radius: 6px;
+  background: var(--calcdown-code-inline-bg);
+  border: 1px solid var(--calcdown-border);
+  border-radius: var(--calcdown-radius-xs);
   padding: 1px 5px;
 }
 
@@ -79,27 +99,29 @@ export const CALCDOWN_BASE_CSS = `
 
 .calcdown-root .calcdown-inputs .field label {
   font-size: 12px;
-  color: #333;
+  color: var(--calcdown-label);
 }
 
 .calcdown-root .calcdown-inputs .field input {
   padding: 8px 10px;
-  border: 1px solid #d9dbe5;
-  border-radius: 10px;
+  border: 1px solid var(--calcdown-border-strong);
+  border-radius: var(--calcdown-radius-md);
   font-size: 14px;
-  background: #fff;
+  background: var(--calcdown-surface);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .calcdown-root .calcdown-code {
-  border: 1px dashed #d9dbe5;
-  border-radius: 12px;
+  border: 1px dashed var(--calcdown-border-strong);
+  border-radius: var(--calcdown-radius);
   padding: 10px 12px;
-  background: #fff;
+  background: var(--calcdown-surface);
 }
 
 .calcdown-root .calcdown-code-title {
   font-size: 12px;
-  color: #6a718a;
+  color: var(--calcdown-muted);
   margin: 0 0 8px 0;
 }
 
@@ -119,22 +141,22 @@ export const CALCDOWN_BASE_CSS = `
 }
 
 .calcdown-root .card {
-  border: 1px solid #e8eaf2;
-  border-radius: 12px;
+  border: 1px solid var(--calcdown-border);
+  border-radius: var(--calcdown-radius);
   padding: 12px;
-  background: #fff;
+  background: var(--calcdown-surface);
 }
 
 .calcdown-root .card .k {
   font-size: 12px;
-  color: #6a718a;
+  color: var(--calcdown-muted);
   margin-bottom: 6px;
 }
 
 .calcdown-root .card .v {
   font-size: 22px;
   font-weight: 650;
-  color: #111428;
+  color: var(--calcdown-text);
 }
 
 .calcdown-root table {
@@ -146,16 +168,16 @@ export const CALCDOWN_BASE_CSS = `
 
 .calcdown-root th,
 .calcdown-root td {
-  border-bottom: 1px solid #e8eaf2;
+  border-bottom: 1px solid var(--calcdown-border);
   padding: 8px 10px;
   text-align: left;
   vertical-align: top;
 }
 
 .calcdown-root th {
-  color: #6a718a;
+  color: var(--calcdown-muted);
   font-weight: 600;
-  background: #f6f7fb;
+  background: var(--calcdown-code-inline-bg);
   position: sticky;
   top: 0;
 }
@@ -164,20 +186,20 @@ export const CALCDOWN_BASE_CSS = `
   width: 100%;
   box-sizing: border-box;
   padding: 6px 8px;
-  border: 1px solid #d9dbe5;
-  border-radius: 8px;
+  border: 1px solid var(--calcdown-border-strong);
+  border-radius: var(--calcdown-radius-sm);
   font-size: 12px;
-  background: #fff;
+  background: var(--calcdown-surface);
 }
 
 .calcdown-root .calcdown-messages {
   margin-top: 10px;
   white-space: pre-wrap;
   word-break: break-word;
-  background: #0b1020;
-  color: #e7ebff;
+  background: var(--calcdown-messages-bg);
+  color: var(--calcdown-messages-text);
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--calcdown-radius-md);
   font-size: 12px;
 }
 `.trim();

@@ -1,6 +1,7 @@
 import type { StdRuntimeContext } from "../stdlib/std.js";
 import type { CalcdownMessage } from "../types.js";
 import type { DataTable } from "../types.js";
+import { inferCalcdownTypes } from "../infer_types.js";
 import type { ChartMode, TableEditEvent } from "./render_views.js";
 import { clear } from "./dom.js";
 import { renderCalcdownViews } from "./render_views.js";
@@ -47,8 +48,10 @@ export function mountCalcdown(container: HTMLElement, markdown: string, opts: Mo
     if (nextOpts.context !== undefined) runOpts.context = nextOpts.context;
     const res = runCalcdown(nextMarkdown, runOpts);
 
+    const inferred = inferCalcdownTypes(res.program);
     const tableSchemas: Record<string, DataTable> = Object.create(null);
     for (const t of res.program.tables) tableSchemas[t.name] = t;
+    for (const [k, schema] of Object.entries(inferred.computedTables)) tableSchemas[k] = schema;
 
     const renderOpts: {
       container: HTMLElement;
@@ -56,8 +59,9 @@ export function mountCalcdown(container: HTMLElement, markdown: string, opts: Mo
       values: typeof res.values;
       chartMode?: ChartMode;
       tableSchemas?: Record<string, DataTable>;
+      valueTypes?: typeof inferred.valueTypes;
       onEditTableCell?: (ev: TableEditEvent) => void;
-    } = { container: viewsEl, views: res.views, values: res.values };
+    } = { container: viewsEl, views: res.views, values: res.values, valueTypes: inferred.valueTypes };
     if (nextOpts.chartMode !== undefined) renderOpts.chartMode = nextOpts.chartMode;
     renderOpts.tableSchemas = tableSchemas;
     if (nextOpts.onEditTableCell) renderOpts.onEditTableCell = nextOpts.onEditTableCell;
@@ -118,8 +122,10 @@ export function mountCalcdownDocument(
   let state: CalcdownDocumentState | null = null;
 
   function tableSchemasFrom(run: ReturnType<typeof runCalcdown>): Record<string, DataTable> {
+    const inferred = inferCalcdownTypes(run.program);
     const tableSchemas: Record<string, DataTable> = Object.create(null);
     for (const t of run.program.tables) tableSchemas[t.name] = t;
+    for (const [k, schema] of Object.entries(inferred.computedTables)) tableSchemas[k] = schema;
     return tableSchemas;
   }
 
@@ -140,10 +146,12 @@ export function mountCalcdownDocument(
     runOpts.overrides = currentOverrides;
     if (currentOpts.context !== undefined) runOpts.context = currentOpts.context;
     const res = runCalcdown(currentMarkdown, runOpts);
+    const inferred = inferCalcdownTypes(res.program);
 
     const updated = updateCalcdownDocumentViews(state, res, {
       ...(currentOpts.chartMode ? { chartMode: currentOpts.chartMode } : {}),
       tableSchemas: tableSchemasFrom(res),
+      valueTypes: inferred.valueTypes,
       ...(currentOpts.onEditTableCell ? { onEditTableCell: currentOpts.onEditTableCell } : {}),
     });
 
@@ -158,6 +166,7 @@ export function mountCalcdownDocument(
     runOpts.overrides = currentOverrides;
     if (nextOpts.context !== undefined) runOpts.context = nextOpts.context;
     const res = runCalcdown(nextMarkdown, runOpts);
+    const inferred = inferCalcdownTypes(res.program);
 
     const tableSchemas = tableSchemasFrom(res);
 
@@ -168,6 +177,7 @@ export function mountCalcdownDocument(
       overrides: currentOverrides,
       ...(nextOpts.chartMode ? { chartMode: nextOpts.chartMode } : {}),
       tableSchemas,
+      valueTypes: inferred.valueTypes,
       ...(nextOpts.onEditTableCell ? { onEditTableCell: nextOpts.onEditTableCell } : {}),
       ...(nextOpts.showSourceBlocks ? { showSourceBlocks: true } : {}),
       onInputChange: (ev) => {

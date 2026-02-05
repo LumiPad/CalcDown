@@ -59,6 +59,30 @@ In CalcDown documents (`.calc.md`), fenced code blocks are reserved for CalcDown
 
 Rationale: `.calc.md` is a modeling document. Allowing arbitrary fenced code blocks makes tooling ambiguous (parsing, formatting, source mapping). Use prose and inline code (`` `...` ``) for literal snippets.
 
+### 0.2 Narrative comments (recommended)
+
+CalcDown documents are normal Markdown. In narrative text (i.e. outside fenced CalcDown blocks), engines:
+
+- SHOULD treat HTML comments `<!-- ... -->` as invisible.
+- MAY treat lines whose first non-whitespace characters are `%%` as invisible comments (Mermaid-style).
+
+### 0.3 Type argument syntax (recommended)
+
+CalcDown types are written as tokens like `number`, `date`, or `currency(USD)`.
+
+Engines:
+
+- SHOULD treat core scalar type names as case-insensitive (e.g. `Currency` ≡ `currency`).
+- MAY accept square brackets `Type[Arg]` as a synonym for parentheses `type(arg)` (e.g. `Currency[USD]` ≡ `currency(USD)`).
+
+### 0.4 Currency propagation (recommended)
+
+CalcDown `currency(XXX)` values are still **numbers** at evaluation time, but engines SHOULD preserve currency types when inferring default display formats for derived values.
+
+In particular, engines SHOULD treat arithmetic between `currency(XXX)` and other numeric scalars as yielding `currency(XXX)` (e.g. `currency * number → currency`, `currency + number → currency`), and aggregation over currency vectors SHOULD yield currency (e.g. `std.math.sum(currency[]) → currency`).
+
+Engines MAY also use currency types to infer view formatting defaults. For example, engines MAY treat view formats `currency` / `{ kind: "currency" }` as a shorthand for “render this value as currency using the bound type’s ISO currency code (if known)”.
+
 ## 1) Design goal: “Read → Edit → Write”
 
 CalcDown 0.7 validates and evaluates a project (“Read → Eval → Print”).

@@ -7,13 +7,13 @@ calcdown: 0.9
 
 This example is the same as `invoice.calc.md`, but the `items` table is loaded from an external CSV file.
 
-## Inputs
+%% Inputs
 
 ``` inputs
 tax_rate : percent = 24.0
 ```
 
-## Data
+%% Data
 
 ``` data
 name: items
@@ -26,12 +26,12 @@ columns:
   id: string
   name: string
   qty: integer
-  unit_price: number
+  unit_price: Currency[USD]
 ---
 # External data source: docs/examples/data/items.csv
 ```
 
-## Calc
+%% Calc
 
 ``` calc
 const lines = std.table.map(items, (row) => ({
@@ -47,7 +47,7 @@ const tax = subtotal * (tax_rate / 100);
 const total = subtotal + tax;
 ```
 
-## View
+%% View
 
 ``` view
 [
@@ -67,10 +67,7 @@ const total = subtotal + tax;
           "label": "Qty"
         },
         {
-          "format": {
-            "digits": 2,
-            "kind": "number"
-          },
+          "format": "currency",
           "key": "unit_price",
           "label": "Unit price"
         }
@@ -96,18 +93,12 @@ const total = subtotal + tax;
           "label": "Qty"
         },
         {
-          "format": {
-            "digits": 2,
-            "kind": "number"
-          },
+          "format": "currency",
           "key": "unit_price",
           "label": "Unit price"
         },
         {
-          "format": {
-            "digits": 2,
-            "kind": "number"
-          },
+          "format": "currency",
           "key": "line_total",
           "label": "Total"
         }
@@ -122,26 +113,17 @@ const total = subtotal + tax;
     "spec": {
       "items": [
         {
-          "format": {
-            "digits": 2,
-            "kind": "number"
-          },
+          "format": "currency",
           "key": "subtotal",
           "label": "Subtotal"
         },
         {
-          "format": {
-            "digits": 2,
-            "kind": "number"
-          },
+          "format": "currency",
           "key": "tax",
           "label": "Tax"
         },
         {
-          "format": {
-            "digits": 2,
-            "kind": "number"
-          },
+          "format": "currency",
           "key": "total",
           "label": "Total"
         }

@@ -195,11 +195,6 @@ function validateFormat(raw: unknown, line: number, messages: CalcdownMessage[])
         ? scaleRaw
         : null;
 
-  if (kind === "currency" && !currency) {
-    err(messages, line, "CD_VIEW_FORMAT_CURRENCY_REQUIRED", "format.currency is required when format.kind is 'currency'");
-    return null;
-  }
-
   if (kind !== "percent" && scaleRaw !== undefined) {
     err(messages, line, "CD_VIEW_FORMAT_SCALE_UNSUPPORTED", "format.scale is only supported when format.kind is 'percent'");
     return null;
