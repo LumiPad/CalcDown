@@ -1,3 +1,8 @@
+/**
+ * Purpose: Run CalcDown parse, evaluate, and view validation in one call.
+ * Intent: Provide a simple browser-first execution wrapper for integrations.
+ */
+
 import { evaluateProgram, parseProgram } from "../index.js";
 import type { CalcdownProgram } from "../index.js";
 import type { CalcdownMessage } from "../types.js";

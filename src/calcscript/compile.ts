@@ -1,3 +1,8 @@
+/**
+ * Purpose: Compile CalcScript const declarations into typed calc nodes.
+ * Intent: Validate expressions early and capture dependency metadata for DAG evaluation.
+ */
+
 import { CalcdownMessage } from "../types.js";
 import { Expr } from "./ast.js";
 import { extractTopLevelConstDeclarations } from "./decl.js";

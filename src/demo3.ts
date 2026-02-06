@@ -1,3 +1,8 @@
+/**
+ * Purpose: Run demo3 with editable table inputs and computed outputs.
+ * Intent: Demonstrate table-driven modeling, views, and round-trip updates.
+ */
+
 import { parseProgram } from "./index.js";
 import type { CalcdownMessage, DataTable } from "./types.js";
 import { applyPatch, buildSourceMap, type PatchOp } from "./editor/patcher.js";

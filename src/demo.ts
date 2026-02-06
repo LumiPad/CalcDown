@@ -1,3 +1,8 @@
+/**
+ * Purpose: Run the baseline browser demo wiring for CalcDown rendering.
+ * Intent: Provide a simple manual playground for end-to-end integration checks.
+ */
+
 import {
   buildBarChartCard,
   buildLineChartCard,

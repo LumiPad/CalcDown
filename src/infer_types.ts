@@ -1,3 +1,8 @@
+/**
+ * Purpose: Infer scalar and table types from program inputs and expressions.
+ * Intent: Provide format-friendly type hints for rendering and computed tables.
+ */
+
 import type { CalcNode } from "./calcscript/compile.js";
 import type { Expr, ObjectLiteralExpr } from "./calcscript/ast.js";
 import { getMemberPath } from "./calcscript/parser.js";

@@ -2,7 +2,7 @@
 # make/node.mk — Node/TypeScript build and demo targets
 # ==============================================================================
 
-.PHONY: install build typecheck analyze lint test watch serve demo check verify check-node check-deps
+.PHONY: install build typecheck analyze lint source-check test watch serve demo check verify check-node check-deps
 
 check-node: ## Check that node and npm are available
 	@command -v $(NODE) >/dev/null 2>&1 || { echo "ERROR: node not found on PATH."; exit 1; }
@@ -29,6 +29,9 @@ analyze: check-deps ## Run static analysis (tsc unused checks)
 
 lint: analyze ## Alias for analyze
 
+source-check: check-node ## Check TypeScript file headers + soft word limit
+	@$(NODE) tools/check_ts_policy.js
+
 test: check-deps ## Run tests (with coverage thresholds)
 	$(NPM) test
 
@@ -43,6 +46,6 @@ serve: ## Serve repo at http://localhost:$(PORT)
 demo: build ## Build then serve demo
 	@$(MAKE) serve
 
-check: typecheck analyze test ## Run typecheck, static analysis, tests
+check: typecheck analyze source-check test ## Run typecheck, static analysis, source policy, tests
 
 verify: check conformance ## Run check + deterministic conformance suite

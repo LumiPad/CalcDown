@@ -92,6 +92,7 @@ Early-stage: the spec is evolving, and the code here is a minimal, safety-first 
 - Run the demos: `make demo` then open `http://localhost:5173/demos/`
 - Copy/paste integration template: `http://localhost:5173/docs/integration-example.html`
 - Run typecheck/tests: `make check`
+- Run source policy checks (TS headers + soft word limit): `make source-check`
 - Run full deterministic verification: `make verify`
 
 ## Demos

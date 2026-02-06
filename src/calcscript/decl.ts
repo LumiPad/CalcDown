@@ -1,3 +1,8 @@
+/**
+ * Purpose: Extract top-level const declarations from calc blocks.
+ * Intent: Provide stable source locations and declaration boundaries for diagnostics.
+ */
+
 import { CalcdownMessage } from "../types.js";
 
 export interface ConstDeclaration {

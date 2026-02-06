@@ -1,3 +1,8 @@
+/**
+ * Purpose: Run demo2 with input overrides and cards rendering.
+ * Intent: Show minimal input-to-computed-value workflow in the browser.
+ */
+
 import { parseProgram } from "./index.js";
 import type { MountCalcdownHandle } from "./web/mount.js";
 import { byId, createDebouncer, mountCalcdown, readInputOverrides, renderInputsForm } from "./web/index.js";

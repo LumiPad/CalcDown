@@ -1,3 +1,8 @@
+/**
+ * Purpose: Load and coerce external table sources in the browser.
+ * Intent: Verify source hashes and normalize rows before evaluation.
+ */
+
 import { coerceRowsToTable } from "../data.js";
 import { parseCsv } from "../util/csv.js";
 import type { CalcdownMessage, DataTable, InputType } from "../types.js";

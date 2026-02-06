@@ -1,3 +1,8 @@
+/**
+ * Purpose: Parse CalcDown inputs blocks into typed input definitions.
+ * Intent: Normalize core type syntax and validate default values with line metadata.
+ */
+
 import {
   CalcdownMessage,
   FencedCodeBlock,

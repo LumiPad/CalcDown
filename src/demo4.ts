@@ -1,3 +1,8 @@
+/**
+ * Purpose: Run demo4 example browser for docs/examples models.
+ * Intent: Exercise parser, evaluator, and view rendering across packaged examples.
+ */
+
 import { parseProgram } from "./index.js";
 import type { DataTable } from "./types.js";
 import { parseIsoDate } from "./util/date.js";

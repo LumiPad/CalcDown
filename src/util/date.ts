@@ -1,3 +1,8 @@
+/**
+ * Purpose: Parse and format ISO dates plus month arithmetic.
+ * Intent: Keep date semantics UTC-stable for deterministic evaluation.
+ */
+
 export function parseIsoDate(value: string): Date {
   const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) throw new Error(`Invalid date (expected YYYY-MM-DD): ${value}`);

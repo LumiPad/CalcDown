@@ -1,3 +1,8 @@
+/**
+ * Purpose: Provide small DOM helper utilities for CalcDown web modules.
+ * Intent: Centralize common operations and keep rendering code concise.
+ */
+
 export function clear(el: HTMLElement): void {
   while (el.firstChild) el.removeChild(el.firstChild);
 }

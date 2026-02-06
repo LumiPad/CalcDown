@@ -1,3 +1,8 @@
+/**
+ * Purpose: Export the browser integration surface for CalcDown.
+ * Intent: Provide a stable import entrypoint for embedders and demos.
+ */
+
 export { byId, clear } from "./dom.js";
 export { createDebouncer } from "./debounce.js";
 export { buildBarChartCard, buildLineChartCard } from "./charts.js";

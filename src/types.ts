@@ -1,3 +1,8 @@
+/**
+ * Purpose: Declare shared CalcDown parser and runtime TypeScript types.
+ * Intent: Keep cross-module contracts explicit and stable.
+ */
+
 export type CalcdownBlockKind = "inputs" | "data" | "calc" | "view" | "unknown";
 
 export type CalcdownSeverity = "error" | "warning";

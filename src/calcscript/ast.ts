@@ -1,3 +1,8 @@
+/**
+ * Purpose: Define CalcScript abstract syntax tree node types.
+ * Intent: Keep parser, compiler, and evaluator contracts explicit and type-safe.
+ */
+
 export type Expr =
   | NumberLiteralExpr
   | StringLiteralExpr

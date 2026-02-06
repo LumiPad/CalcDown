@@ -1,3 +1,8 @@
+/**
+ * Purpose: Render validated views into DOM cards, tables, charts, layouts.
+ * Intent: Translate runtime values into deterministic interactive view components.
+ */
+
 import type { DataTable, InputType } from "../types.js";
 import { defaultLabelForKey, type CalcdownView, type LayoutItem, type LayoutSpec, type TableViewColumn, type ValueFormat } from "../view_contract.js";
 import { formatFormattedValue } from "./format.js";

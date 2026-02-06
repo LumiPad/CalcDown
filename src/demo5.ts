@@ -1,3 +1,8 @@
+/**
+ * Purpose: Run demo5 with external data sources and hash verification.
+ * Intent: Demonstrate secure loading of CSV/JSON tables in browser workflows.
+ */
+
 import { parseProgram } from "./index.js";
 import type { CalcdownMessage } from "./types.js";
 import type { MountCalcdownHandle } from "./web/mount.js";

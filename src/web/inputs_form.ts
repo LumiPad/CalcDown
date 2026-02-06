@@ -1,3 +1,8 @@
+/**
+ * Purpose: Render and wire editable input controls for inputs blocks.
+ * Intent: Bridge HTML form events to typed runtime override values.
+ */
+
 import type { InputDefinition } from "../types.js";
 import { formatIsoDate } from "../util/date.js";
 

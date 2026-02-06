@@ -1,3 +1,8 @@
+/**
+ * Purpose: Install default CSS styles for CalcDown web components.
+ * Intent: Keep demo and embed styling consistent with minimal setup.
+ */
+
 const STYLE_ID = "calcdown-styles";
 
 export const CALCDOWN_BASE_CSS = `

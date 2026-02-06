@@ -1,3 +1,8 @@
+/**
+ * Purpose: Render chart view data into lightweight SVG/HTML charts.
+ * Intent: Provide deterministic browser chart output without heavy dependencies.
+ */
+
 import type { ValueFormat } from "../view_contract.js";
 import { formatFormattedValue } from "./format.js";
 

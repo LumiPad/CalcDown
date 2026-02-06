@@ -1,3 +1,8 @@
+/**
+ * Purpose: Render narrative markdown text safely into DOM elements.
+ * Intent: Support lightweight formatting while blocking unsafe links and comments.
+ */
+
 function isHrLine(line: string): boolean {
   const t = line.trim();
   if (!t) return false;

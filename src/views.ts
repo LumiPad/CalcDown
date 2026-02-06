@@ -1,3 +1,8 @@
+/**
+ * Purpose: Parse view blocks from JSON or YAML into safe objects.
+ * Intent: Reject unsafe structures while preserving user-facing parse diagnostics.
+ */
+
 import { CalcdownMessage, FencedCodeBlock } from "./types.js";
 import { JSON_SCHEMA, load as yamlLoad, YAMLException } from "js-yaml";
 

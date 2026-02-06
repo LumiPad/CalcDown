@@ -1,3 +1,8 @@
+/**
+ * Purpose: Tokenize CalcScript source into a safe lexical stream.
+ * Intent: Support parser needs with precise syntax error positions.
+ */
+
 export type Token =
   | { type: "number"; value: number; pos: number }
   | { type: "string"; value: string; pos: number }

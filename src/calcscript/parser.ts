@@ -1,3 +1,8 @@
+/**
+ * Purpose: Parse CalcScript expressions into AST nodes.
+ * Intent: Implement deterministic grammar and operator precedence without runtime code generation.
+ */
+
 import { CallExpr, Expr, IdentifierExpr, MemberExpr } from "./ast.js";
 import { CalcScriptSyntaxError, Token, Tokenizer } from "./tokenizer.js";
 

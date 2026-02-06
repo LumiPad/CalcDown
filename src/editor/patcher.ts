@@ -1,3 +1,8 @@
+/**
+ * Purpose: Apply atomic source patches for inputs and inline table cells.
+ * Intent: Preserve user-authored formatting while producing deterministic edits.
+ */
+
 import { formatIsoDate } from "../util/date.js";
 import type { DataTable, InputDefinition, InputType } from "../types.js";
 

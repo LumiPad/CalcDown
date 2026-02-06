@@ -1,3 +1,8 @@
+/**
+ * Purpose: Parse CSV text into header and row arrays.
+ * Intent: Provide deterministic lightweight CSV handling for offline-friendly tooling.
+ */
+
 export interface ParsedCsv {
   header: string[];
   rows: string[][];

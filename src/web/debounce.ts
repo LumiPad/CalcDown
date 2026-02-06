@@ -1,3 +1,8 @@
+/**
+ * Purpose: Provide a small debouncer utility for browser event handling.
+ * Intent: Reduce redundant recalculation during rapid user interactions.
+ */
+
 export interface Debouncer {
   schedule(fn: () => void): void;
   cancel(): void;

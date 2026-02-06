@@ -1,3 +1,8 @@
+/**
+ * Purpose: Mount CalcDown runtime and UI into a DOM container.
+ * Intent: Coordinate parsing, evaluation, rendering, and user edit feedback loops.
+ */
+
 import type { StdRuntimeContext } from "../stdlib/std.js";
 import type { CalcdownMessage } from "../types.js";
 import type { DataTable } from "../types.js";

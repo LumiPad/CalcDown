@@ -1,3 +1,8 @@
+/**
+ * Purpose: Render markdown narrative with inline CalcDown views.
+ * Intent: Combine document parsing with incremental in-page view rendering.
+ */
+
 import { parseInputsBlock } from "../inputs.js";
 import { extractFrontMatter } from "../markdown.js";
 import type { CalcdownMessage, DataTable, FencedCodeBlock, InputType } from "../types.js";

@@ -1,3 +1,8 @@
+/**
+ * Purpose: Parse front matter and fenced blocks from CalcDown markdown.
+ * Intent: Provide stable block extraction for downstream parsers and editors.
+ */
+
 import { FrontMatter, FencedCodeBlock, ParsedCalcdownMarkdown } from "./types.js";
 
 function parseSimpleYaml(raw: string): Record<string, string> {

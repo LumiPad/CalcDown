@@ -1,3 +1,8 @@
+/**
+ * Purpose: Format scalar and typed values for web view presentation.
+ * Intent: Apply consistent locale-aware rendering with CalcDown format semantics.
+ */
+
 import { formatIsoDate } from "../util/date.js";
 import type { ValueFormat } from "../view_contract.js";
 
