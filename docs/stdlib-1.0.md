@@ -1,13 +1,10 @@
-# CalcDown Standard Library 0.8
+# CalcDown Standard Library 1.0
 
-**This draft is SUPERSEDED.**  
-Current version → [stdlib 1.0](stdlib-1.0.md) — [CalcDown 1.0](calcdown-1.0.md)
+Status: **1.0**. This document specifies the standard library object available as `std` when evaluating CalcScript expressions in CalcDown 1.0.
 
-Status: **Draft / experimental**. This document specifies the standard library object available as `std` when evaluating CalcScript expressions in CalcDown 0.8.
+CalcDown 1.0 does not change the standard library from 0.9.
 
-CalcDown 0.8 does not change the standard library from 0.7.
-
-See also: `docs/calcdown-0.8.md` (the file format, project files, execution model, and tooling).
+See also: `docs/calcdown-1.0.md` (the file format, project files, execution model, and tooling).
 
 Goals:
 
@@ -21,7 +18,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** are to be interpre
 
 ## 1) Conformance
 
-A CalcDown 0.8 engine MUST provide a `std` object with the **Core** APIs in §3.
+A CalcDown 1.0 engine MUST provide a `std` object with the **Core** APIs in §3.
 
 Engines MAY provide additional APIs in §4 (Recommended) and beyond, but MUST NOT expose unsafe capabilities (network, storage, timers, dynamic code loading).
 
@@ -511,6 +508,6 @@ Rules:
 - `std.finance.ipmt`, `std.finance.ppmt`
 - `std.date.range` and other calendar helpers
 
-## Appendix A) Changes from 0.7 → 0.8
+## Appendix A) Changes from 0.9 → 1.0
 
-- No changes from 0.7.
+- No changes from 0.9.

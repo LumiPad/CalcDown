@@ -1,5 +1,8 @@
 # CalcDown 0.9 (Draft Specification)
 
+**This draft is SUPERSEDED.**  
+Current version → [CalcDown 1.0](calcdown-1.0.md) — [stdlib 1.0](stdlib-1.0.md)
+
 Status: **Draft / experimental**. CalcDown is a text-first, Git-friendly format for “spreadsheet-like” models: typed inputs and data, a deterministic compute graph, and declarative views.
 
 This document specifies **CalcDown 0.9**, focusing on **tooling and integration contracts** and the **Editor Protocol**: how tools map runtime objects back to source text and apply safe, minimal patches. The execution model, blocks, views, and standard library are unchanged from 0.7 unless stated otherwise. CalcScript expressions additionally support comparison/equality operators, boolean operators (`&&`, `||`, `!`), and the conditional operator (`?:`). Calc blocks MAY also include optional **table patch statements** (experimental; see §0.9 additions (calc patches)).

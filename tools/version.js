@@ -1,1 +1,1 @@
-export const CURRENT_CALCDOWN_VERSION = "0.9";
+export const CURRENT_CALCDOWN_VERSION = "1.0";

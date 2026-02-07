@@ -1,7 +1,7 @@
 # CalcDown 0.4 (Draft Specification)
 
 **This draft is SUPERSEDED.**  
-Current version → [CalcDown 0.9](calcdown-0.9.md) — [stdlib 0.9](stdlib-0.9.md)
+Current version → [CalcDown 1.0](calcdown-1.0.md) — [stdlib 1.0](stdlib-1.0.md)
 
 Status: **Draft / experimental**. CalcDown is a text-first, Git-friendly format for “spreadsheet-like” models: typed inputs and data, a deterministic compute graph, and declarative views.
 

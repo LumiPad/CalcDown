@@ -14,10 +14,10 @@ import { CURRENT_CALCDOWN_VERSION } from "./version.js";
 function usage() {
   return [
     "Usage:",
-    "  tools/calcdown.js validate <entry.calc.md|calcdown.json> [--lock calcdown.lock.json] [--strict] [--date YYYY-MM-DD|--datetime ISO]",
-    "  tools/calcdown.js diff <a.calc.md> <b.calc.md>",
-    "  tools/calcdown.js lock <entry.calc.md|calcdown.json> [out.lock.json]",
-    "  tools/calcdown.js export <entry.calc.md|calcdown.json> [--out out.json] [--lock calcdown.lock.json] [--strict] [--date YYYY-MM-DD|--datetime ISO]",
+    "  tools/calcdown.js validate <entry.calc.md|entry.md|calcdown.json> [--lock calcdown.lock.json] [--strict] [--date YYYY-MM-DD|--datetime ISO]",
+    "  tools/calcdown.js diff <a.calc.md|a.md> <b.calc.md|b.md>",
+    "  tools/calcdown.js lock <entry.calc.md|entry.md|calcdown.json> [out.lock.json]",
+    "  tools/calcdown.js export <entry.calc.md|entry.md|calcdown.json> [--out out.json] [--lock calcdown.lock.json] [--strict] [--date YYYY-MM-DD|--datetime ISO]",
     "  tools/calcdown.js fmt [files...]",
     "",
     "Notes:",
@@ -322,13 +322,20 @@ async function loadProject(entryArg) {
   const seen = new Set();
   const docs = [];
 
+  function fenceModeForPath(filePath) {
+    const lower = String(filePath ?? "").toLowerCase();
+    if (lower.endsWith(".calc.md")) return "implicit";
+    if (lower.endsWith(".md")) return "explicit";
+    return "implicit";
+  }
+
   async function visit(filePath) {
     const abs = path.resolve(filePath);
     if (seen.has(abs)) return;
     seen.add(abs);
 
     const markdown = await readText(abs);
-    const parsed = parseProgram(markdown);
+    const parsed = parseProgram(markdown, { fenceMode: fenceModeForPath(abs) });
     docs.push({ file: abs, markdown, parsed });
 
     const includeRaw = parsed.program.frontMatter?.data?.include;
@@ -1114,7 +1121,7 @@ async function main() {
 
   if (cmd === "validate") {
     const entry = args[1];
-    if (!entry) throw new Error("validate: missing <entry.calc.md|calcdown.json>");
+    if (!entry) throw new Error("validate: missing <entry.calc.md|entry.md|calcdown.json>");
     const lockIdx = args.indexOf("--lock");
     const lockPath = lockIdx !== -1 ? args[lockIdx + 1] : null;
     const currentDateTime = parseCurrentDateTime(args);
@@ -1126,14 +1133,14 @@ async function main() {
   if (cmd === "diff") {
     const a = args[1];
     const b = args[2];
-    if (!a || !b) throw new Error("diff: expected <a.calc.md> <b.calc.md>");
+    if (!a || !b) throw new Error("diff: expected <a.calc.md|a.md> <b.calc.md|b.md>");
     await cmdDiff(a, b);
     return;
   }
 
   if (cmd === "lock") {
     const entry = args[1];
-    if (!entry) throw new Error("lock: missing <entry.calc.md|calcdown.json>");
+    if (!entry) throw new Error("lock: missing <entry.calc.md|entry.md|calcdown.json>");
     const out = args[2] ?? null;
     await cmdLock(entry, out);
     return;
@@ -1141,7 +1148,7 @@ async function main() {
 
   if (cmd === "export") {
     const entry = args[1];
-    if (!entry) throw new Error("export: missing <entry.calc.md|calcdown.json>");
+    if (!entry) throw new Error("export: missing <entry.calc.md|entry.md|calcdown.json>");
     const outIdx = args.indexOf("--out");
     const outPath = outIdx !== -1 ? args[outIdx + 1] : null;
     const lockIdx = args.indexOf("--lock");

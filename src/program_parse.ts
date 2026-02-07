@@ -6,13 +6,24 @@
 import { compileCalcScript, type CalcNode } from "./calcscript/compile.js";
 import { parseDataBlock } from "./data.js";
 import { parseInputsBlock } from "./inputs.js";
-import { parseCalcdownMarkdown } from "./markdown.js";
+import { isCalcdownFenceMarkerInfo, parseCalcdownMarkdown } from "./markdown.js";
 import type { CalcdownProgram } from "./program_types.js";
 import type { CalcdownMessage, DataTable, InputDefinition } from "./types.js";
 
-export function parseProgram(markdown: string): { program: CalcdownProgram; messages: CalcdownMessage[] } {
+export type ParseProgramFenceMode = "implicit" | "explicit";
+
+export interface ParseProgramOptions {
+  /**
+   * - `implicit` (default): treat `inputs|data|calc|view` fences as CalcDown blocks.
+   * - `explicit`: treat only `calcdown <kind>` / `calcdown:<kind>` fences as CalcDown blocks.
+   */
+  fenceMode?: ParseProgramFenceMode;
+}
+
+export function parseProgram(markdown: string, opts: ParseProgramOptions = {}): { program: CalcdownProgram; messages: CalcdownMessage[] } {
   const messages: CalcdownMessage[] = [];
   const parsed = parseCalcdownMarkdown(markdown);
+  const fenceMode: ParseProgramFenceMode = opts.fenceMode ?? "implicit";
 
   const inputs: InputDefinition[] = [];
   const tables: DataTable[] = [];
@@ -22,18 +33,59 @@ export function parseProgram(markdown: string): { program: CalcdownProgram; mess
   const seenTables = new Set<string>();
   const seenNodes = new Set<string>();
   const allowedBlockLangs = new Set(["inputs", "data", "calc", "view"]);
+  const suspiciousLangs = new Set(["input", "views", "datas", "calcs"]);
 
-  for (const block of parsed.codeBlocks) {
+  const blocks = parsed.codeBlocks.map((block) => {
+    if (fenceMode !== "explicit") return block;
+    if (isCalcdownFenceMarkerInfo(block.info)) return block;
+    if (allowedBlockLangs.has(block.lang)) {
+      return Object.assign(Object.create(null), block, { lang: "" });
+    }
+    return block;
+  });
+
+  for (const block of blocks) {
     if (!allowedBlockLangs.has(block.lang)) {
-      messages.push({
-        severity: "error",
-        code: block.lang ? "CD_BLOCK_UNKNOWN_LANG" : "CD_BLOCK_MISSING_LANG",
-        message: block.lang
-          ? `Unknown fenced code block language: ${block.lang}. In .calc.md, fenced code blocks are reserved for CalcDown blocks (inputs|data|calc|view).`
-          : "Fenced code block is missing a language tag. In .calc.md, fenced code blocks are reserved for CalcDown blocks (inputs|data|calc|view).",
-        line: block.fenceLine,
-        ...(block.lang ? { blockLang: block.lang } : {}),
-      });
+      if (block.lang === "calcdown") {
+        const tokens = block.info.trim().split(/\s+/).filter(Boolean);
+        const first = tokens[0] ?? "";
+        let kind = "";
+        if (first.toLowerCase() === "calcdown") {
+          kind = (tokens[1] ?? "").trim();
+        } else {
+          const colonIdx = first.indexOf(":");
+          if (colonIdx !== -1 && first.slice(0, colonIdx).toLowerCase() === "calcdown") {
+            kind = first.slice(colonIdx + 1).trim();
+          }
+        }
+
+        messages.push({
+          severity: "error",
+          code: kind ? "CD_BLOCK_CALCDOWN_UNKNOWN_KIND" : "CD_BLOCK_CALCDOWN_MISSING_KIND",
+          message: kind
+            ? `Unknown CalcDown block kind: ${kind}. Expected one of: inputs, data, calc, view.`
+            : "CalcDown fenced code blocks using the 'calcdown' marker must include a kind: inputs, data, calc, or view.",
+          line: block.fenceLine,
+          blockLang: "calcdown",
+        });
+      } else if (block.lang && fenceMode !== "explicit") {
+        const lower = block.lang.toLowerCase();
+        if (suspiciousLangs.has(lower)) {
+          const hint = lower === "input" ? "inputs" : lower.endsWith("s") ? lower.slice(0, -1) : "";
+          messages.push({
+            severity: "warning",
+            code: "CD_BLOCK_SUSPECT_LANG",
+            message: hint
+              ? `Suspicious fenced code block language: ${block.lang}. Did you mean '${hint}'?`
+              : `Suspicious fenced code block language: ${block.lang}.`,
+            line: block.fenceLine,
+            blockLang: block.lang,
+          });
+        }
+      }
+
+      // Non-CalcDown fences are allowed and ignored by the program parser.
+      continue;
     }
 
     if (block.lang === "inputs") {
@@ -191,7 +243,7 @@ export function parseProgram(markdown: string): { program: CalcdownProgram; mess
   return {
     program: {
       frontMatter: parsed.frontMatter,
-      blocks: parsed.codeBlocks,
+      blocks,
       inputs,
       tables,
       nodes,

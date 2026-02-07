@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "calcdown-view-1.0.schema.json",
+  "title": "CalcDown 1.0 View (calcdown library)",
+  "oneOf": [
+    { "$ref": "calcdown-view-cards-1.0.schema.json" },
+    { "$ref": "calcdown-view-table-1.0.schema.json" },
+    { "$ref": "calcdown-view-chart-1.0.schema.json" },
+    { "$ref": "calcdown-view-layout-1.0.schema.json" }
+  ]
+}

@@ -260,6 +260,38 @@ function isClosingFenceLine(line, fence) {
   return true;
 }
 
+const CALCDOWN_BLOCK_KINDS = new Set(["inputs", "data", "calc", "view"]);
+
+function normalizeFenceLang(info) {
+  const tokens = String(info ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const first = tokens[0] ?? "";
+  if (!first) return "";
+
+  const firstLower = first.toLowerCase();
+  if (CALCDOWN_BLOCK_KINDS.has(firstLower)) return firstLower;
+
+  if (firstLower === "calcdown") {
+    const kindLower = String(tokens[1] ?? "").toLowerCase();
+    if (CALCDOWN_BLOCK_KINDS.has(kindLower)) return kindLower;
+    return "calcdown";
+  }
+
+  const colonIdx = first.indexOf(":");
+  if (colonIdx !== -1) {
+    const prefix = first.slice(0, colonIdx).toLowerCase();
+    if (prefix === "calcdown") {
+      const kindLower = first.slice(colonIdx + 1).toLowerCase();
+      if (CALCDOWN_BLOCK_KINDS.has(kindLower)) return kindLower;
+      return "calcdown";
+    }
+  }
+
+  return first;
+}
+
 function parseFencedBlocks(markdown) {
   const lines = markdown.split(/\r?\n/);
   const out = [];
@@ -277,7 +309,7 @@ function parseFencedBlocks(markdown) {
     const indent = open[1] ?? "";
     const fence = open[2] ?? "```";
     const info = (open[3] ?? "").trimEnd();
-    const lang = info.trim().split(/\s+/)[0] ?? "";
+    const lang = normalizeFenceLang(info);
     i++;
 
     const contentLines = [];

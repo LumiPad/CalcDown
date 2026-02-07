@@ -4,7 +4,9 @@
  */
 
 export { parseProgram } from "./program_parse.js";
+export type { ParseProgramFenceMode, ParseProgramOptions } from "./program_parse.js";
 export { evaluateProgram } from "./program_evaluate.js";
 export type { CalcdownProgram } from "./program_types.js";
 export { createStd, std } from "./stdlib/std.js";
 export { inferCalcdownTypes } from "./infer_types.js";
+export { hasCalcdownFenceMarkers, isCalcdownFenceMarkerInfo } from "./markdown.js";

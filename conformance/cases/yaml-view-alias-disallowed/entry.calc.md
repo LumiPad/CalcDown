@@ -1,5 +1,5 @@
 ---
-calcdown: 0.9
+calcdown: 1.0
 title: YAML aliases disallowed (conformance)
 ---
 

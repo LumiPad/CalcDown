@@ -33,7 +33,7 @@ async function loadDefault(): Promise<void> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     source.value = await res.text();
   } catch {
-    source.value = `---\n` + `title: Minimal\n` + `calcdown: 0.9\n` + `---\n\n` + `\`\`\`inputs\n` + `loan_amount   : number = 300000\n` + `interest_rate : percent = 5.0\n` + `term_years    : integer = 30\n` + `\`\`\`\n\n` + `\`\`\`calc\n` + `const total_months = term_years * 12;\n` + `const rate_mo = std.finance.toMonthlyRate(interest_rate);\n` + `const payment = std.finance.pmt(rate_mo, total_months, -loan_amount);\n` + `\`\`\`\n`;
+    source.value = `---\n` + `title: Minimal\n` + `calcdown: 1.0\n` + `---\n\n` + `\`\`\`inputs\n` + `loan_amount   : number = 300000\n` + `interest_rate : percent = 5.0\n` + `term_years    : integer = 30\n` + `\`\`\`\n\n` + `\`\`\`calc\n` + `const total_months = term_years * 12;\n` + `const rate_mo = std.finance.toMonthlyRate(interest_rate);\n` + `const payment = std.finance.pmt(rate_mo, total_months, -loan_amount);\n` + `\`\`\`\n`;
   }
 }
 
