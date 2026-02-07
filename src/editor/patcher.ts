@@ -25,6 +25,12 @@ function toPkString(value: unknown): string | null {
   return null;
 }
 
+function isZeroDecimalCurrencyType(type: InputType): boolean {
+  if (type.name !== "currency") return false;
+  const code = (type.args[0] ?? "").trim().toUpperCase();
+  return code === "ISK";
+}
+
 function inputDefaultText(type: InputType, value: unknown): string {
   switch (type.name) {
     case "string": {
@@ -58,7 +64,7 @@ function inputDefaultText(type: InputType, value: unknown): string {
     case "currency": {
       const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
       if (!Number.isFinite(n)) throw new Error("Expected numeric value");
-      return String(n);
+      return String(isZeroDecimalCurrencyType(type) ? Math.round(n) : n);
     }
     default: {
       return JSON.stringify(value);
@@ -89,7 +95,7 @@ function jsonCellValue(type: InputType, value: unknown): unknown {
     case "currency": {
       const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
       if (!Number.isFinite(n)) throw new Error("Expected numeric value");
-      return n;
+      return isZeroDecimalCurrencyType(type) ? Math.round(n) : n;
     }
     case "date": {
       if (value instanceof Date) return formatIsoDate(value);
@@ -233,4 +239,3 @@ export function applyPatch(source: string, op: PatchOp, map: SourceMap): string 
 
   return source;
 }
-

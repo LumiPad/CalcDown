@@ -29,6 +29,12 @@ function coerceBooleanInitial(value: unknown): boolean {
   return Boolean(value);
 }
 
+function isZeroDecimalCurrency(def: InputDefinition): boolean {
+  if (def.type.name !== "currency") return false;
+  const code = (def.type.args[0] ?? "").trim().toUpperCase();
+  return code === "ISK";
+}
+
 export function renderInputsForm(opts: RenderInputsOptions): void {
   const root = opts.container;
   while (root.firstChild) root.removeChild(root.firstChild);
@@ -75,12 +81,23 @@ export function renderInputsForm(opts: RenderInputsOptions): void {
     ) {
       input.type = "number";
       input.dataset.kind = "number";
-      input.step = typeName === "integer" ? "1" : typeName === "percent" ? "0.1" : "0.01";
-      input.value = typeof initialValue === "number" ? String(initialValue) : String(initialValue);
+      const isInteger = typeName === "integer";
+      const isZeroDecimal = isZeroDecimalCurrency(def);
+      const forceWholeNumber = isInteger || isZeroDecimal;
+      input.step = forceWholeNumber ? "1" : typeName === "percent" ? "0.1" : "0.01";
+      const normalizedInitial =
+        typeof initialValue === "number"
+          ? isInteger
+            ? Math.trunc(initialValue)
+            : isZeroDecimal
+              ? Math.round(initialValue)
+              : initialValue
+          : initialValue;
+      input.value = typeof normalizedInitial === "number" ? String(normalizedInitial) : String(normalizedInitial);
       input.addEventListener("input", () => {
         const n = input.valueAsNumber;
         if (!Number.isFinite(n)) return;
-        const value = typeName === "integer" ? Math.trunc(n) : n;
+        const value = isInteger ? Math.trunc(n) : isZeroDecimal ? Math.round(n) : n;
         fire(value);
       });
     } else {

@@ -82,10 +82,15 @@ function parseDefaultValue(type: InputType, text: string): InputValue {
     }
     case "number":
     case "decimal":
-    case "percent":
+    case "percent": {
+      const n = Number(t);
+      if (!Number.isFinite(n)) throw new Error(`Invalid numeric default: ${t}`);
+      return n;
+    }
     case "currency": {
       const n = Number(t);
       if (!Number.isFinite(n)) throw new Error(`Invalid numeric default: ${t}`);
+      if ((type.args[0] ?? "").trim().toUpperCase() === "ISK") return Math.round(n);
       return n;
     }
     default: {

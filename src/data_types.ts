@@ -80,8 +80,11 @@ export function parseScalarByType(type: InputType, value: unknown): unknown {
     case "number":
     case "decimal":
     case "percent":
+      if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("Expected number");
+      return value;
     case "currency":
       if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("Expected number");
+      if ((type.args[0] ?? "").trim().toUpperCase() === "ISK") return Math.round(value);
       return value;
     case "date":
       if (typeof value !== "string") throw new Error("Expected ISO date string");

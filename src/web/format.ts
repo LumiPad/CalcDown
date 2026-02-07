@@ -68,11 +68,14 @@ export function formatFormattedValue(v: unknown, fmt: ValueFormat | undefined): 
   if (kind === "currency") {
     const currency = typeof fmt === "string" ? undefined : fmt.currency;
     if (typeof v !== "number" || !Number.isFinite(v) || !currency) return formatValue(v);
+    const code = currency.trim().toUpperCase();
+    // ISK has no minor unit in this product; always render whole króna.
+    const fixedDigits = code === "ISK" ? 0 : digits;
     const nf = new Intl.NumberFormat(undefined, {
       style: "currency",
       currency,
-      ...(digits !== undefined
-        ? { minimumFractionDigits: digits, maximumFractionDigits: digits }
+      ...(fixedDigits !== undefined
+        ? { minimumFractionDigits: fixedDigits, maximumFractionDigits: fixedDigits }
         : {}),
     });
     return nf.format(v);

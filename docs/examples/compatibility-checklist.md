@@ -4,6 +4,7 @@ This file tracks whether each `docs/examples/*.calc.md` example parses and evalu
 
 Legend: ✓ works, ⚠ partial (warnings), ✗ broken (errors)
 
+- `iceland-inflation.calc.md` — ✓ works
 - `invoice-external.calc.md` — ✓ works
 - `invoice.calc.md` — ✓ works
 - `mortgage.calc.md` — ✓ works

@@ -22,6 +22,10 @@ test("currency types propagate through numeric ops and std aggregations", () => 
     "{\"id\":\"i2\",\"qty\":1,\"unit_price\":2.25}",
     "```",
     "",
+    "``` inputs",
+    "tax_rate : percent = 0.1",
+    "```",
+    "",
     "``` calc",
     "const lines = std.table.map(items, (row) => ({",
     "  id: row.id,",
@@ -29,6 +33,8 @@ test("currency types propagate through numeric ops and std aggregations", () => 
     "}));",
     "",
     "const subtotal = std.math.sum(lines.line_total);",
+    "const tax_from_percent_right = subtotal * tax_rate;",
+    "const tax_from_percent_left = tax_rate * subtotal;",
     "const tax = subtotal * 0.1;",
     "const total = subtotal + tax;",
     "```",
@@ -44,6 +50,10 @@ test("currency types propagate through numeric ops and std aggregations", () => 
   assert.deepEqual(inferred.valueTypes.subtotal?.args, ["USD"]);
   assert.equal(inferred.valueTypes.tax?.name, "currency");
   assert.deepEqual(inferred.valueTypes.tax?.args, ["USD"]);
+  assert.equal(inferred.valueTypes.tax_from_percent_right?.name, "currency");
+  assert.deepEqual(inferred.valueTypes.tax_from_percent_right?.args, ["USD"]);
+  assert.equal(inferred.valueTypes.tax_from_percent_left?.name, "currency");
+  assert.deepEqual(inferred.valueTypes.tax_from_percent_left?.args, ["USD"]);
   assert.equal(inferred.valueTypes.total?.name, "currency");
   assert.deepEqual(inferred.valueTypes.total?.args, ["USD"]);
 

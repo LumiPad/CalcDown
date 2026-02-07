@@ -59,7 +59,18 @@ function seriesFromOptions(opts: ChartCardOptions): ChartSeriesSpec[] {
 
 const defaultSeriesColors = Object.freeze(["#4c6fff", "#22c55e", "#f97316", "#ef4444", "#a855f7", "#06b6d4"]);
 
-function formatXTick(x: number, opts: ChartCardOptions, xIsDate: boolean): string {
+function formatXTick(
+  x: number,
+  opts: ChartCardOptions,
+  xIsDate: boolean,
+  categoryLabels?: ReadonlyMap<number, string>
+): string {
+  if (categoryLabels) {
+    const exact = categoryLabels.get(x);
+    if (exact !== undefined) return exact;
+    const rounded = categoryLabels.get(Math.round(x));
+    if (rounded !== undefined) return rounded;
+  }
   const v: unknown = xIsDate ? new Date(x) : x;
   return formatFormattedValue(v, opts.xFormat);
 }
@@ -144,15 +155,23 @@ export function buildLineChartCard(opts: ChartCardOptions): HTMLElement {
     return view;
   }
 
-  const xIsDate = opts.rows.some((r) => r[opts.xField] instanceof Date);
+  const xNumbersByRow = opts.rows.map((r) => asNumber(r[opts.xField]));
+  const useCategoryIndex = xNumbersByRow.every((x) => x === null);
+  const xCategoryLabels = useCategoryIndex
+    ? new Map<number, string>(
+        opts.rows.map((row, idx) => [idx, formatCategoryLabel(row[opts.xField], opts.xFormat)])
+      )
+    : undefined;
+  const xIsDate = !useCategoryIndex && opts.rows.some((r) => r[opts.xField] instanceof Date);
 
   const seriesPoints: { spec: ChartSeriesSpec; points: { x: number; y: number }[] }[] = [];
   const allPoints: { x: number; y: number }[] = [];
 
   for (const s of series) {
     const points: { x: number; y: number }[] = [];
-    for (const row of opts.rows) {
-      const x = asNumber(row[opts.xField]);
+    for (let rowIndex = 0; rowIndex < opts.rows.length; rowIndex++) {
+      const row = opts.rows[rowIndex]!;
+      const x = useCategoryIndex ? rowIndex : asNumber(row[opts.xField]);
       const y = asNumber(row[s.key]);
       if (x === null || y === null) continue;
       points.push({ x, y });
@@ -273,7 +292,7 @@ export function buildLineChartCard(opts: ChartCardOptions): HTMLElement {
     label.setAttribute("fill", "#6a718a");
     label.setAttribute("font-size", "10");
     label.setAttribute("text-anchor", "middle");
-    label.textContent = formatXTick(tx, opts, xIsDate);
+    label.textContent = formatXTick(tx, opts, xIsDate, xCategoryLabels);
     svg.appendChild(label);
   }
 

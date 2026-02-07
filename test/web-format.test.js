@@ -26,8 +26,24 @@ test("formatFormattedValue: percent01 formats ratio values", () => {
 });
 
 test("formatFormattedValue: currency uses Intl defaults when digits omitted", () => {
-  const expected = new Intl.NumberFormat(undefined, { style: "currency", currency: "ISK" }).format(1234.5);
+  const expected = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "ISK",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(1234.5);
   const out = formatFormattedValue(1234.5, { kind: "currency", currency: "ISK" });
+  assert.equal(out, expected);
+});
+
+test("formatFormattedValue: ISK ignores explicit fraction digits and rounds to whole króna", () => {
+  const expected = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "ISK",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(154.3);
+  const out = formatFormattedValue(154.3, { kind: "currency", currency: "ISK", digits: 2 });
   assert.equal(out, expected);
 });
 

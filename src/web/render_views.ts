@@ -73,6 +73,10 @@ function currencyHeaderHint(codeRaw: string): string {
   return hint;
 }
 
+function isZeroDecimalCurrencyCode(codeRaw: string | undefined): boolean {
+  return (codeRaw ?? "").trim().toUpperCase() === "ISK";
+}
+
 function resolveCurrencyFormatFromType(t: InputType | undefined): ValueFormat | null {
   if (!t) return null;
   if (t.name !== "currency") return null;
@@ -217,12 +221,22 @@ function buildTableView(
 
         if (type.name === "integer" || type.name === "number" || type.name === "decimal" || type.name === "percent" || type.name === "currency") {
           input.type = "number";
-          input.step = type.name === "integer" ? "1" : "0.01";
+          const isInteger = type.name === "integer";
+          const isZeroDecimal = type.name === "currency" && isZeroDecimalCurrencyCode(type.args[0]);
+          const forceWholeNumber = isInteger || isZeroDecimal;
+          input.step = forceWholeNumber ? "1" : "0.01";
           input.value = typeof value === "number" && Number.isFinite(value) ? String(value) : "";
           input.addEventListener("input", () => {
             const next = input.valueAsNumber;
             if (input.value !== "" && !Number.isFinite(next)) return;
-            const nextValue = input.value === "" ? undefined : type.name === "integer" ? Math.trunc(next) : next;
+            const nextValue =
+              input.value === ""
+                ? undefined
+                : isInteger
+                  ? Math.trunc(next)
+                  : isZeroDecimal
+                    ? Math.round(next)
+                    : next;
             opts.onEditTableCell?.({ tableName: sourceName, primaryKey: pk, column: c.key, value: nextValue });
           });
         } else if (type.name === "date") {

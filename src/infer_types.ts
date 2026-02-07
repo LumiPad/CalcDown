@@ -46,6 +46,10 @@ function currencyCode(t: InputType): string | null {
   return typeof code === "string" && code.trim() ? code.trim().toUpperCase() : null;
 }
 
+function isPercentType(t: InputType): boolean {
+  return t.name === "percent";
+}
+
 function currencyTypeWithCode(code: string | null): InputType {
   return scalarType("currency", code ? [code] : []);
 }
@@ -60,9 +64,12 @@ function combineCurrencyCodes(a: InputType, b: InputType): string | null {
 function numericResultType(op: string, a: InputType, b: InputType): InputType {
   const aCur = a.name === "currency";
   const bCur = b.name === "currency";
+  const aPct = isPercentType(a);
+  const bPct = isPercentType(b);
 
   if (op === "+" || op === "-") {
     if (aCur || bCur) return currencyTypeWithCode(combineCurrencyCodes(a, b));
+    if (aPct && bPct) return scalarType("percent");
     return scalarType("number");
   }
 
@@ -73,6 +80,7 @@ function numericResultType(op: string, a: InputType, b: InputType): InputType {
 
   if (op === "/") {
     if (aCur && !bCur) return currencyTypeWithCode(currencyCode(a));
+    if (aPct && !bPct) return scalarType("percent");
     return scalarType("number");
   }
 
@@ -150,6 +158,7 @@ function inferStdMathAgg(arg0: Inferred): Inferred {
   const el = arg0.element;
   if (!isNumericScalar(el)) return scalar("number");
   if (el.name === "currency") return { kind: "scalar", type: currencyTypeWithCode(currencyCode(el)) };
+  if (el.name === "percent") return scalar("percent");
   return scalar("number");
 }
 
@@ -168,6 +177,7 @@ function inferStdTableSum(rows: Inferred, keyExpr: Expr): Inferred {
   const el = col.element;
   if (!isNumericScalar(el)) return scalar("number");
   if (el.name === "currency") return { kind: "scalar", type: currencyTypeWithCode(currencyCode(el)) };
+  if (el.name === "percent") return scalar("percent");
   return scalar("number");
 }
 

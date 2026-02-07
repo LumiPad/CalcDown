@@ -6,6 +6,12 @@
 import type { InputDefinition, InputType, InputValue } from "./types.js";
 import { parseIsoDate } from "./util/date.js";
 
+function isZeroDecimalCurrencyType(type: InputType): boolean {
+  if (type.name !== "currency") return false;
+  const code = (type.args[0] ?? "").trim().toUpperCase();
+  return code === "ISK";
+}
+
 export function normalizeOverrideValue(def: InputDefinition, value: unknown): InputValue {
   if (def.type.name === "date") {
     if (value instanceof Date) return value;
@@ -27,14 +33,15 @@ export function normalizeOverrideValue(def: InputDefinition, value: unknown): In
   }
 
   if (def.type.name === "number" || def.type.name === "decimal" || def.type.name === "percent" || def.type.name === "currency") {
+    const forceInteger = isZeroDecimalCurrencyType(def.type);
     if (typeof value === "number") {
       if (!Number.isFinite(value)) throw new Error(`Invalid override for ${def.name} (expected number)`);
-      return value;
+      return forceInteger ? Math.round(value) : value;
     }
     if (typeof value === "string") {
       const n = Number(value);
       if (!Number.isFinite(n)) throw new Error(`Invalid override for ${def.name} (expected number)`);
-      return n;
+      return forceInteger ? Math.round(n) : n;
     }
     throw new Error(`Invalid override for ${def.name} (expected number)`);
   }
@@ -109,7 +116,7 @@ export function coerceTableCellValue(type: InputType, value: unknown): unknown {
   if (t === "number" || t === "decimal" || t === "percent" || t === "currency") {
     const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
     if (!Number.isFinite(n)) throw new Error("Expected numeric value");
-    return n;
+    return isZeroDecimalCurrencyType(type) ? Math.round(n) : n;
   }
 
   if (t === "date") {
