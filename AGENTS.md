@@ -14,7 +14,10 @@ These instructions apply to the whole repository unless a more specific `AGENTS.
 - `make typecheck` — strict TS typecheck
 - `make analyze` — static analysis (unused locals/params)
 - `make test` — Node test runner + coverage thresholds (stdlib)
-- `make check` — `typecheck + analyze + test`
+- `make source-check` — check TS headers + soft word limit
+- `make agents-check` — enforce AGENTS.md coverage + scopes
+- `make demo-check` — enforce demo minimalism + styling rules
+- `make check` — `typecheck + analyze + source-check + agents-check + demo-check + test`
 - `make conformance` — deterministic conformance suite (versions + fmt-check + examples-check + golden outputs)
 - `make verify` — `make check + make conformance`
 - `make fmt` — canonicalize examples
@@ -47,3 +50,9 @@ These instructions apply to the whole repository unless a more specific `AGENTS.
 - Specs are versioned under `docs/` (e.g. `docs/calcdown-1.0.md`, `docs/stdlib-1.0.md`).
 - Older versions stay **archived/superseded**, not rewritten.
 - Keep examples executable and consistent with the latest spec.
+
+## Demo rules
+
+- Demos should showcase CalcDown’s **own** UI/components (from `src/web/index.ts`), not custom re-implementations.
+- Demos MUST call `installCalcdownStyles()` and ensure the page has a `.calcdown-root` element (preferably on `<body>`).
+- Demo CSS should be limited to page scaffolding (layout, spacing). Do **not** style CalcDown primitives like `.view`, `.view-title`, `.cards`, `.card`, `.calcdown-*`, or `table/th/td` (except setting `--calcdown-*` CSS variables on `.calcdown-root`).

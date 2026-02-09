@@ -46,6 +46,59 @@ export const CALCDOWN_BASE_CSS = `
   margin: 0 0 10px 0;
 }
 
+.calcdown-root .view-chart {
+  background: var(--calcdown-surface);
+  box-shadow:
+    0 1px 0 rgba(17, 20, 40, 0.03),
+    0 10px 24px rgba(17, 20, 40, 0.06);
+}
+
+.calcdown-root .view-chart .view-title {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--calcdown-text);
+  margin: 0 0 12px 0;
+}
+
+.calcdown-root .chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--calcdown-border);
+}
+
+.calcdown-root .chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calcdown-root .chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.calcdown-root .chart-legend-label {
+  font-size: 12px;
+  color: var(--calcdown-muted);
+  line-height: 1;
+}
+
+.calcdown-root .calcdown-views {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: min(100%, var(--calcdown-doc-max-width));
+  margin: 0 auto;
+}
+
 .calcdown-root .calcdown-doc {
   display: grid;
   gap: 12px;

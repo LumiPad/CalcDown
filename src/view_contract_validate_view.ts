@@ -136,7 +136,29 @@ function validateAxisSpec(raw: unknown, line: number, messages: CalcdownMessage[
   }
   const label = asString(raw.label) ?? defaultLabelForKey(key);
   const format = validateFormat(raw.format, line, messages) ?? undefined;
-  return Object.assign(Object.create(null), { key, label, ...(format ? { format } : {}) });
+
+  const hasKind = Object.prototype.hasOwnProperty.call(raw, "kind");
+  const kindRaw = hasKind ? asString(raw.kind) : null;
+  const kind = kindRaw === "line" ? "line" : kindRaw === "bar" || kindRaw === "column" ? "bar" : null;
+  if (hasKind && !kind) {
+    err(messages, line, "CD_VIEW_CHART_SERIES_KIND", "chart axis spec kind must be 'line' or 'bar'");
+    return null;
+  }
+
+  const hasArea = Object.prototype.hasOwnProperty.call(raw, "area");
+  const areaRaw = hasArea ? raw.area : undefined;
+  if (hasArea && typeof areaRaw !== "boolean") {
+    err(messages, line, "CD_VIEW_CHART_SERIES_AREA", "chart axis spec area must be a boolean");
+    return null;
+  }
+
+  return Object.assign(Object.create(null), {
+    key,
+    label,
+    ...(format ? { format } : {}),
+    ...(kind ? { kind } : {}),
+    ...(areaRaw === true ? { area: true } : {}),
+  });
 }
 
 function validateAxisSpecList(raw: unknown, line: number, messages: CalcdownMessage[]): ChartAxisSpec[] | null {
@@ -169,14 +191,22 @@ function validateChartView(view: ParsedView, messages: CalcdownMessage[]): Calcd
 
   const title = asString(specRaw.title) ?? undefined;
   const kindRaw = asString(specRaw.kind);
-  const kind = kindRaw === "line" ? "line" : kindRaw === "bar" || kindRaw === "column" ? "bar" : null;
+  const kind =
+    kindRaw === "line"
+      ? "line"
+      : kindRaw === "bar" || kindRaw === "column"
+        ? "bar"
+        : kindRaw === "combo"
+          ? "combo"
+          : null;
   if (!kind) {
-    err(messages, line, "CD_VIEW_CHART_KIND", "chart.spec.kind must be 'line' or 'bar'");
+    err(messages, line, "CD_VIEW_CHART_KIND", "chart.spec.kind must be 'line', 'bar', or 'combo'");
     return null;
   }
 
   const x = validateAxisSpec(specRaw.x, line, messages);
-  const y = validateAxisSpecList(specRaw.y, line, messages) ?? validateAxisSpec(specRaw.y, line, messages);
+  const yList = validateAxisSpecList(specRaw.y, line, messages);
+  const y = yList ?? validateAxisSpec(specRaw.y, line, messages);
   if (!x || !y) {
     err(
       messages,
@@ -184,6 +214,11 @@ function validateChartView(view: ParsedView, messages: CalcdownMessage[]): Calcd
       "CD_VIEW_CHART_AXES",
       "chart.spec.x is required (object with string 'key'); chart.spec.y is required (object with string 'key' or array of such objects)"
     );
+    return null;
+  }
+
+  if (kind === "combo" && (!yList || yList.length < 2)) {
+    err(messages, line, "CD_VIEW_CHART_COMBO", "chart.spec.kind='combo' requires chart.spec.y to be an array with at least 2 series");
     return null;
   }
 

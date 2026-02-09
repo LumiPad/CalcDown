@@ -10,12 +10,15 @@ import type { MountCalcdownHandle } from "./web/mount.js";
 import {
   byId,
   createDebouncer,
+  installCalcdownStyles,
   mountCalcdown,
   readInputOverrides,
   renderInputsForm,
   type ChartMode,
   type TableEditEvent,
 } from "./web/index.js";
+
+installCalcdownStyles();
 
 const run = byId("run", HTMLButtonElement, "run button");
 const live = byId("live", HTMLInputElement, "live checkbox");
@@ -40,6 +43,7 @@ const EXAMPLES: Record<string, string> = Object.freeze({
   savings: new URL("../docs/examples/savings.calc.md", import.meta.url).toString(),
   invoice: new URL("../docs/examples/invoice.calc.md", import.meta.url).toString(),
   cashflow: new URL("../docs/examples/simple-cashflow.calc.md", import.meta.url).toString(),
+  charts: new URL("../docs/examples/charts.calc.md", import.meta.url).toString(),
 });
 
 function readChartMode(): ChartMode {

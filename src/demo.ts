@@ -5,12 +5,16 @@
 
 import {
   buildBarChartCard,
+  buildComboChartCard,
   buildLineChartCard,
   byId,
   createDebouncer,
+  installCalcdownStyles,
   runCalcdown,
   type ChartMode,
 } from "./web/index.js";
+
+installCalcdownStyles();
 
 const source = byId("source", HTMLTextAreaElement, "source textarea");
 const output = byId("output", HTMLPreElement, "output pre");
@@ -90,7 +94,6 @@ function renderCharts(res: ReturnType<typeof runCalcdown>, chartMode: ChartMode)
     const ySummary = series.map((s) => s.key).join(", ");
     const subtitle = mark === "line" ? `${sourceName}.${ySummary} over ${xField}` : `${sourceName}.${ySummary} by ${xField}`;
 
-    const classes = { container: "chart", title: "chart-title", subtitle: "chart-subtitle" };
     const chartOpts = {
       title,
       subtitle,
@@ -98,13 +101,10 @@ function renderCharts(res: ReturnType<typeof runCalcdown>, chartMode: ChartMode)
       xField,
       xLabel: view.spec.x.label,
       series,
-      classes,
+      classes: { container: "view view-chart" },
       ...(view.spec.x.format ? { xFormat: view.spec.x.format } : {}),
     };
-    const chart =
-      mark === "line"
-        ? buildLineChartCard(chartOpts)
-        : buildBarChartCard(chartOpts);
+    const chart = mark === "combo" ? buildComboChartCard(chartOpts) : mark === "line" ? buildLineChartCard(chartOpts) : buildBarChartCard(chartOpts);
     charts.appendChild(chart);
   }
 }

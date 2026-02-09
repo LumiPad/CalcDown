@@ -10,5 +10,4 @@ Scope: `make/**`.
 
 ## Expected targets
 
-- `make build`, `make typecheck`, `make analyze`, `make test`, `make check`, `make demo`
-
+- `make build`, `make typecheck`, `make analyze`, `make source-check`, `make agents-check`, `make demo-check`, `make test`, `make check`, `make conformance`, `make verify`, `make demo`

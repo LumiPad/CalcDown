@@ -11,6 +11,8 @@
       "properties": {
         "key": { "type": "string", "minLength": 1 },
         "label": { "type": "string" },
+        "kind": { "enum": ["line", "bar", "column"] },
+        "area": { "type": "boolean" },
         "format": {
           "oneOf": [
             { "enum": ["number", "integer", "percent", "percent01", "currency", "date"] },
@@ -43,13 +45,23 @@
       "required": ["kind", "x", "y"],
       "properties": {
         "title": { "type": "string" },
-        "kind": { "enum": ["line", "bar", "column"] },
+        "kind": { "enum": ["line", "bar", "column", "combo"] },
         "x": { "$ref": "#/$defs/axisSpec" },
         "y": {
           "oneOf": [
             { "$ref": "#/$defs/axisSpec" },
             { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/axisSpec" } }
           ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "combo" } } },
+          "then": {
+            "properties": {
+              "y": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/axisSpec" } }
+            }
+          }
         }
       }
     }

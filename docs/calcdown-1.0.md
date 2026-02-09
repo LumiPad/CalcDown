@@ -444,9 +444,14 @@ CalcDown 1.0 extends the standardized `chart` view to support **multiple plotted
 For `library: "calcdown"` charts:
 
 - `chart.spec.x` is unchanged (one axis spec object).
+- `chart.spec.kind` MUST be one of: `line`, `bar` (or `column`), or `combo`.
 - `chart.spec.y` MAY be either:
   - a single axis spec object (legacy), or
   - an array of axis spec objects, where each entry is plotted as a separate series.
+- If `chart.spec.kind` is `combo`, `chart.spec.y` MUST be an array with at least 2 series.
+- Axis specs in `chart.spec.y` MAY include:
+  - `kind`: `line` or `bar` (or `column`) to control per-series rendering in `combo` charts. If omitted, engines SHOULD default the first series to `bar` and subsequent series to `line`.
+  - `area`: boolean. If `true` and the rendered chart has exactly one line series, engines MAY fill the area under that line.
 
 ## 6) Types
 

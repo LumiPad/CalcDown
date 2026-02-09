@@ -60,6 +60,8 @@ export interface ChartAxisSpec {
   key: string;
   label: string;
   format?: ValueFormat;
+  kind?: "line" | "bar";
+  area?: boolean;
 }
 
 export interface CalcdownChartView {
@@ -69,7 +71,7 @@ export interface CalcdownChartView {
   source: string;
   spec: {
     title?: string;
-    kind: "line" | "bar";
+    kind: "line" | "bar" | "combo";
     x: ChartAxisSpec;
     y: ChartAxisSpec | ChartAxisSpec[];
   };

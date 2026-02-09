@@ -14,7 +14,6 @@
     </script>
     <style>
       body {
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
         margin: 16px;
       }
       header {
@@ -28,10 +27,6 @@
       select {
         padding: 8px 12px;
       }
-      .muted {
-        color: #666;
-        font-size: 12px;
-      }
       label.muted {
         display: inline-flex;
         align-items: center;
@@ -42,16 +37,6 @@
         grid-template-columns: 1fr 1fr;
         gap: 16px;
         align-items: start;
-      }
-      .panel {
-        border: 1px solid #e2e2e2;
-        border-radius: 12px;
-        background: #fff;
-        padding: 12px;
-      }
-      .panel > h2 {
-        font-size: 14px;
-        margin: 0 0 10px 0;
       }
       textarea {
         width: 100%;
@@ -73,19 +58,9 @@
         font-size: 12px;
         margin-bottom: 8px;
       }
-      pre {
-        white-space: pre-wrap;
-        word-break: break-word;
-        background: #0b1020;
-        color: #e7ebff;
-        padding: 12px;
-        border-radius: 10px;
-        margin: 0;
-        font-size: 12px;
-      }
     </style>
   </head>
-  <body>
+  <body class="calcdown-root">
     <header>
       <button id="run">Recompute</button>
       <label class="muted">
@@ -104,17 +79,17 @@
     </header>
 
     <div class="grid">
-      <div class="panel">
-        <h2>Source (.md notebook)</h2>
+      <div class="view">
+        <div class="view-title">Source (.md notebook)</div>
         <textarea id="source" spellcheck="false"></textarea>
       </div>
 
-      <div class="panel">
-        <h2>Rendered document</h2>
+      <div class="view">
+        <div class="view-title">Rendered document</div>
         <div id="preview"></div>
         <details>
           <summary>Messages</summary>
-          <pre id="messages"></pre>
+          <pre id="messages" class="calcdown-messages"></pre>
         </details>
       </div>
     </div>
@@ -122,4 +97,3 @@
     <script type="module" src="../../dist/demo6.js"></script>
   </body>
 </html>
-

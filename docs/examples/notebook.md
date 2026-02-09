@@ -15,10 +15,9 @@ CalcDown blocks are **opt-in** using explicit fences:
 <!-- This HTML comment will not render. -->
 %% This line comment will not render either.
 
-```mermaid
-graph TD;
-  A[Markdown] --> B[Mermaid];
-  A --> C[CalcDown];
+```sql
+-- This is a normal notebook code fence (not CalcDown).
+select 1 as ok;
 ```
 
 ```view
@@ -73,6 +72,20 @@ const breakdown = [
 ];
 ```
 
+```calcdown calc
+const daily_base = (people * daily_food) + lodging_night;
+
+const daily_schedule = std.data.scan(
+  std.data.sequence(days),
+  (state, day) => ({
+    cumulative: state.cumulative + daily_base,
+    daily_cost: daily_base,
+    day,
+  }),
+  { seed: { cumulative: 0 } }
+);
+```
+
 ```calcdown view
 [
   {
@@ -110,6 +123,33 @@ const breakdown = [
       "x": { "key": "category", "label": "Category" },
       "y": { "key": "amount", "label": "Amount", "format": "currency" }
     }
+  },
+  {
+    "id": "daily_combo",
+    "library": "calcdown",
+    "type": "chart",
+    "source": "daily_schedule",
+    "spec": {
+      "title": "Daily vs cumulative",
+      "kind": "combo",
+      "x": { "key": "day", "label": "Day" },
+      "y": [
+        { "key": "daily_cost", "kind": "bar", "label": "Daily cost", "format": "currency" },
+        { "key": "cumulative", "kind": "line", "label": "Cumulative", "format": "currency" }
+      ]
+    }
+  },
+  {
+    "id": "cumulative_area",
+    "library": "calcdown",
+    "type": "chart",
+    "source": "daily_schedule",
+    "spec": {
+      "title": "Cumulative (area)",
+      "kind": "line",
+      "x": { "key": "day", "label": "Day" },
+      "y": { "key": "cumulative", "label": "Cumulative", "format": "currency", "area": true }
+    }
   }
 ]
 ```
@@ -125,9 +165,10 @@ const breakdown = [
     "items": [
       { "ref": "summary" },
       { "ref": "extras_table" },
+      { "ref": "daily_combo" },
+      { "ref": "cumulative_area" },
       { "ref": "breakdown_chart" }
     ]
   }
 }
 ```
-

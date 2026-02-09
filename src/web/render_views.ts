@@ -6,7 +6,7 @@
 import type { DataTable, InputType } from "../types.js";
 import { defaultLabelForKey, type CalcdownView, type LayoutItem, type LayoutSpec, type TableViewColumn, type ValueFormat } from "../view_contract.js";
 import { formatFormattedValue } from "./format.js";
-import { buildBarChartCard, buildLineChartCard, type ChartCardClasses, type ChartSeriesSpec } from "./charts.js";
+import { buildBarChartCard, buildComboChartCard, buildLineChartCard, type ChartCardClasses, type ChartSeriesSpec } from "./charts.js";
 
 export type ChartMode = "spec" | "line" | "bar";
 
@@ -371,15 +371,14 @@ function buildLayoutItem(
     const series: ChartSeriesSpec[] = ySpecs.map((s) => {
       const fmtRaw = s.format ? (s.format as ValueFormat) : undefined;
       const fmt = resolveFormat(fmtRaw, schemaCols ? schemaCols[s.key] : undefined);
-      return Object.assign(Object.create(null), { key: s.key, label: s.label }, fmt ? { format: fmt } : {});
+      const kind = s.kind === "line" || s.kind === "bar" ? s.kind : undefined;
+      const area = s.area === true ? true : undefined;
+      return Object.assign(Object.create(null), { key: s.key, label: s.label }, fmt ? { format: fmt } : {}, kind ? { kind } : {}, area ? { area } : {});
     });
     const title = target.spec.title ?? target.id;
     const mark = ctx.chartMode === "spec" ? target.spec.kind : ctx.chartMode;
-    const ySummary = series.map((s) => s.key).join(", ");
-    const subtitle =
-      mark === "line" ? `${sourceName}.${ySummary} over ${xField}` : `${sourceName}.${ySummary} by ${xField}`;
 
-    const classes: Partial<ChartCardClasses> = Object.assign(Object.create(null), { container: "view", title: "view-title", subtitle: "muted" });
+    const classes: Partial<ChartCardClasses> = Object.assign(Object.create(null), { container: "view view-chart", title: "view-title", subtitle: "muted" });
     const xFormat = resolveFormat(
       target.spec.x.format ? (target.spec.x.format as ValueFormat) : undefined,
       schemaCols ? schemaCols[xField] : undefined
@@ -387,7 +386,6 @@ function buildLayoutItem(
 
     const chartOpts = {
       title,
-      subtitle,
       rows,
       xField,
       xLabel: target.spec.x.label,
@@ -397,6 +395,7 @@ function buildLayoutItem(
     };
     if (mark === "line") return buildLineChartCard(chartOpts);
     if (mark === "bar") return buildBarChartCard(chartOpts);
+    if (mark === "combo") return buildComboChartCard(chartOpts);
     return null;
   }
 

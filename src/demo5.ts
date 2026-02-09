@@ -10,10 +10,13 @@ import {
   byId,
   createDebouncer,
   loadExternalTables,
+  installCalcdownStyles,
   mountCalcdown,
   readInputOverrides,
   renderInputsForm,
 } from "./web/index.js";
+
+installCalcdownStyles();
 
 const run = byId("run", HTMLButtonElement, "run button");
 const live = byId("live", HTMLInputElement, "live checkbox");

@@ -14,7 +14,6 @@
     </script>
     <style>
       body {
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
         margin: 16px;
       }
       header {
@@ -28,10 +27,6 @@
       select {
         padding: 8px 12px;
       }
-      .muted {
-        color: #666;
-        font-size: 12px;
-      }
       label.muted {
         display: inline-flex;
         align-items: center;
@@ -42,34 +37,6 @@
         grid-template-columns: 380px 1fr;
         gap: 16px;
         align-items: start;
-      }
-      .panel {
-        border: 1px solid #e2e2e2;
-        border-radius: 12px;
-        background: #fff;
-        padding: 12px;
-      }
-      .panel h2 {
-        font-size: 14px;
-        margin: 0 0 10px 0;
-      }
-      .inputs {
-        display: grid;
-        gap: 10px;
-      }
-      .field {
-        display: grid;
-        gap: 6px;
-      }
-      .field label {
-        font-size: 12px;
-        color: #333;
-      }
-      .field input {
-        padding: 8px 10px;
-        border: 1px solid #d9dbe5;
-        border-radius: 10px;
-        font-size: 14px;
       }
       textarea {
         width: 100%;
@@ -91,88 +58,9 @@
         font-size: 12px;
         margin-bottom: 8px;
       }
-      pre {
-        white-space: pre-wrap;
-        word-break: break-word;
-        background: #0b1020;
-        color: #e7ebff;
-        padding: 12px;
-        border-radius: 10px;
-        margin: 0;
-        font-size: 12px;
-      }
-
-      .views {
-        display: grid;
-        gap: 12px;
-      }
-      .view {
-        border: 1px solid #e8eaf2;
-        border-radius: 12px;
-        background: #fbfcff;
-        padding: 12px;
-      }
-      .view-title {
-        font-size: 12px;
-        color: #6a718a;
-        margin: 0 0 10px 0;
-      }
-
-      .cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 320px));
-        justify-content: start;
-        gap: 10px;
-      }
-      .card {
-        border: 1px solid #e8eaf2;
-        border-radius: 12px;
-        padding: 12px;
-        background: #fff;
-      }
-      .card .k {
-        font-size: 12px;
-        color: #6a718a;
-        margin-bottom: 6px;
-      }
-      .card .v {
-        font-size: 22px;
-        font-weight: 650;
-        color: #111428;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        font-size: 12px;
-      }
-      th,
-      td {
-        border-bottom: 1px solid #e8eaf2;
-        padding: 8px 10px;
-        text-align: left;
-        vertical-align: top;
-      }
-      th {
-        color: #6a718a;
-        font-weight: 600;
-        background: #f6f7fb;
-        position: sticky;
-        top: 0;
-      }
-      td input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 6px 8px;
-        border: 1px solid #d9dbe5;
-        border-radius: 8px;
-        font-size: 12px;
-        background: #fff;
-      }
     </style>
   </head>
-  <body>
+  <body class="calcdown-root">
     <header>
       <button id="run">Recompute</button>
       <label class="muted">
@@ -186,6 +74,7 @@
           <option value="savings">savings</option>
           <option value="invoice">invoice</option>
           <option value="cashflow">simple-cashflow</option>
+          <option value="charts">charts</option>
         </select>
       </label>
       <label class="muted">
@@ -201,9 +90,9 @@
     </header>
 
     <div class="grid">
-      <div class="panel">
-        <h2>Inputs</h2>
-        <div id="inputs" class="inputs"></div>
+      <div class="view">
+        <div class="view-title">Inputs</div>
+        <div id="inputs" class="calcdown-inputs"></div>
 
         <details>
           <summary>Source</summary>
@@ -211,12 +100,12 @@
         </details>
       </div>
 
-      <div class="panel">
-        <h2>View</h2>
-        <div id="views" class="views"></div>
+      <div class="view">
+        <div class="view-title">View</div>
+        <div id="views"></div>
         <details>
           <summary>Messages</summary>
-          <pre id="messages"></pre>
+          <pre id="messages" class="calcdown-messages"></pre>
         </details>
       </div>
     </div>

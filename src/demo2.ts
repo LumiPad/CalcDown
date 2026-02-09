@@ -5,7 +5,9 @@
 
 import { parseProgram } from "./index.js";
 import type { MountCalcdownHandle } from "./web/mount.js";
-import { byId, createDebouncer, mountCalcdown, readInputOverrides, renderInputsForm } from "./web/index.js";
+import { byId, createDebouncer, installCalcdownStyles, mountCalcdown, readInputOverrides, renderInputsForm } from "./web/index.js";
+
+installCalcdownStyles();
 
 const run = byId("run", HTMLButtonElement, "run button");
 const live = byId("live", HTMLInputElement, "live checkbox");
