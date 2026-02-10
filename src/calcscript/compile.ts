@@ -4,7 +4,7 @@
  */
 
 import { CalcdownMessage } from "../types.js";
-import { Expr } from "./ast.js";
+import { ArrowParam, Expr } from "./ast.js";
 import { extractTopLevelConstDeclarations } from "./decl.js";
 import { parseExpression } from "./parser.js";
 import { CalcScriptSyntaxError } from "./tokenizer.js";
@@ -59,6 +59,10 @@ function collectDependencies(expr: Expr, out: Set<string>): void {
     case "member":
       collectDependencies(expr.object, out);
       return;
+    case "index":
+      collectDependencies(expr.object, out);
+      collectDependencies(expr.index, out);
+      return;
     case "call":
       collectDependencies(expr.callee, out);
       for (const a of expr.args) collectDependencies(a, out);
@@ -69,7 +73,9 @@ function collectDependencies(expr: Expr, out: Set<string>): void {
     case "arrow": {
       const deps = new Set<string>();
       collectDependencies(expr.body, deps);
-      for (const p of expr.params) deps.delete(p);
+      for (const p of expr.params) {
+        for (const name of arrowParamBindings(p)) deps.delete(name);
+      }
       for (const d of deps) out.add(d);
       return;
     }
@@ -78,6 +84,13 @@ function collectDependencies(expr: Expr, out: Set<string>): void {
       return _exhaustive;
     }
   }
+}
+
+function arrowParamBindings(p: ArrowParam): string[] {
+  if (p.kind === "identifier") return [p.name];
+  if (p.kind === "object") return p.properties.map((prop) => prop.binding);
+  const _exhaustive: never = p;
+  return _exhaustive;
 }
 
 function validateExpr(expr: Expr, messages: CalcdownMessage[], line: number, nodeName: string): void {
@@ -111,6 +124,10 @@ function validateExpr(expr: Expr, messages: CalcdownMessage[], line: number, nod
       }
       validateExpr(expr.object, messages, line, nodeName);
       return;
+    case "index":
+      validateExpr(expr.object, messages, line, nodeName);
+      validateExpr(expr.index, messages, line, nodeName);
+      return;
     case "call":
       validateExpr(expr.callee, messages, line, nodeName);
       for (const a of expr.args) validateExpr(a, messages, line, nodeName);
@@ -131,36 +148,90 @@ function validateExpr(expr: Expr, messages: CalcdownMessage[], line: number, nod
       return;
     case "arrow": {
       const seen = new Set<string>();
-      for (const p of expr.params) {
-        if (p === "std") {
-          messages.push({
-            severity: "error",
-            code: "CD_CALC_ARROW_PARAM_RESERVED",
-            message: "The identifier 'std' is reserved and cannot be used as an arrow parameter",
-            line,
-            nodeName,
-          });
+
+      for (const param of expr.params) {
+        if (param.kind === "identifier") {
+          const p = param.name;
+          if (p === "std") {
+            messages.push({
+              severity: "error",
+              code: "CD_CALC_ARROW_PARAM_RESERVED",
+              message: "The identifier 'std' is reserved and cannot be used as an arrow parameter",
+              line,
+              nodeName,
+            });
+          }
+          if (bannedProperties.has(p)) {
+            messages.push({
+              severity: "error",
+              code: "CD_CALC_DISALLOWED_PARAM",
+              message: `Disallowed arrow parameter name: ${p}`,
+              line,
+              nodeName,
+            });
+          }
+          if (seen.has(p)) {
+            messages.push({
+              severity: "error",
+              code: "CD_CALC_DUPLICATE_PARAM",
+              message: `Duplicate arrow parameter name: ${p}`,
+              line,
+              nodeName,
+            });
+          }
+          seen.add(p);
+          continue;
         }
-        if (bannedProperties.has(p)) {
-          messages.push({
-            severity: "error",
-            code: "CD_CALC_DISALLOWED_PARAM",
-            message: `Disallowed arrow parameter name: ${p}`,
-            line,
-            nodeName,
-          });
+
+        if (param.kind === "object") {
+          for (const prop of param.properties) {
+            if (bannedProperties.has(prop.key)) {
+              messages.push({
+                severity: "error",
+                code: "CD_CALC_DISALLOWED_MEMBER",
+                message: `Disallowed property access: ${prop.key}`,
+                line,
+                nodeName,
+              });
+            }
+
+            const binding = prop.binding;
+            if (binding === "std") {
+              messages.push({
+                severity: "error",
+                code: "CD_CALC_ARROW_PARAM_RESERVED",
+                message: "The identifier 'std' is reserved and cannot be used as an arrow parameter",
+                line,
+                nodeName,
+              });
+            }
+            if (bannedProperties.has(binding)) {
+              messages.push({
+                severity: "error",
+                code: "CD_CALC_DISALLOWED_PARAM",
+                message: `Disallowed arrow parameter name: ${binding}`,
+                line,
+                nodeName,
+              });
+            }
+            if (seen.has(binding)) {
+              messages.push({
+                severity: "error",
+                code: "CD_CALC_DUPLICATE_PARAM",
+                message: `Duplicate arrow parameter name: ${binding}`,
+                line,
+                nodeName,
+              });
+            }
+            seen.add(binding);
+          }
+          continue;
         }
-        if (seen.has(p)) {
-          messages.push({
-            severity: "error",
-            code: "CD_CALC_DUPLICATE_PARAM",
-            message: `Duplicate arrow parameter name: ${p}`,
-            line,
-            nodeName,
-          });
-        }
-        seen.add(p);
+
+        const _exhaustive: never = param;
+        return _exhaustive;
       }
+
       validateExpr(expr.body, messages, line, nodeName);
       return;
     }

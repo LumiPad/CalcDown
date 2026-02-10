@@ -75,3 +75,20 @@ test("calc decl extraction: ignores const inside strings and comments while scan
   );
   assert.match(res.decls[2].exprTextRaw, /const local = x \+ 1;/);
 });
+
+test("calc decl extraction: handles comments between tokens and inside expressions", () => {
+  const source = [
+    "const // after-const",
+    "  a /* after-name */ = 1 + // in-expr",
+    "  2 /* block */;",
+  ].join("\n");
+
+  const res = extractTopLevelConstDeclarations(source, 1);
+  assert.deepEqual(res.messages, []);
+  assert.deepEqual(
+    res.decls.map((d) => d.name),
+    ["a"]
+  );
+  assert.match(res.decls[0].exprTextRaw, /1 \+ \/\//);
+  assert.match(res.decls[0].exprTextRaw, /2 \/\* block \*\//);
+});

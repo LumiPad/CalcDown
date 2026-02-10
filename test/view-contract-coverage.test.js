@@ -157,7 +157,17 @@ test("validateCalcdownParsedView handles cards/table/chart/layout success and fa
         title: "Rows",
         editable: true,
         limit: 10,
-        columns: [{ key: "__proto__" }, { key: "gross_margin", format: "percent01" }],
+        columns: [
+          { key: "__proto__" },
+          {
+            key: "gross_margin",
+            format: "percent01",
+            conditionalFormat: [
+              { when: "value < 0", style: "negative" },
+              { when: "value > 0.5", style: { fontWeight: "bold" } },
+            ],
+          },
+        ],
       },
     },
     tableMessages
@@ -167,6 +177,9 @@ test("validateCalcdownParsedView handles cards/table/chart/layout success and fa
   assert.equal(table.spec.limit, 10);
   assert.equal(table.spec.columns.length, 1);
   assert.equal(table.spec.columns[0].label, "Gross Margin");
+  assert.equal(table.spec.columns[0].conditionalFormat.length, 2);
+  assert.equal(table.spec.columns[0].conditionalFormat[0].style, "negative");
+  assert.equal(table.spec.columns[0].conditionalFormat[1].style.fontWeight, "bold");
   assert.ok(codes(tableMessages).includes("CD_VIEW_SCHEMA_DISALLOWED_KEY"));
 
   const chartKindMessages = [];
@@ -309,6 +322,46 @@ test("validateCalcdownParsedView handles cards/table/chart/layout success and fa
   assert.equal(layout.spec.items.length, 2);
   assert.equal(layout.spec.items[1].kind, "layout");
   assert.deepEqual(layoutMessages, []);
+});
+
+test("validateCalcdownParsedView validates table conditionalFormat rules and errors", () => {
+  const messages = [];
+  const table = validateCalcdownParsedView(
+    {
+      line: 1,
+      id: "t_cf",
+      type: "table",
+      source: "rows",
+      spec: {
+        columns: [
+          {
+            key: "a",
+            conditionalFormat: [
+              { when: "value > 0", style: "highlight" },
+              "nope",
+              { style: "positive" },
+              { when: "value <", style: "positive" },
+              { when: "value > 0", style: "nope" },
+              { when: "value > 0", style: 123 },
+              { when: "value > 0", style: { nope: "#fff" } },
+              { when: "value > 0", style: { color: "" } },
+              { when: "value > 0", style: {} },
+            ],
+          },
+          { key: "b", conditionalFormat: { when: "value > 0", style: "positive" } },
+        ],
+      },
+    },
+    messages
+  );
+  assert.ok(table);
+  assert.equal(table.spec.columns[0].conditionalFormat[0].style, "highlight");
+
+  const found = new Set(codes(messages));
+  assert.ok(found.has("CD_VIEW_TABLE_CONDFORM_ARRAY"));
+  assert.ok(found.has("CD_VIEW_TABLE_CONDFORM_RULE"));
+  assert.ok(found.has("CD_VIEW_TABLE_CONDFORM_WHEN"));
+  assert.ok(found.has("CD_VIEW_TABLE_CONDFORM_STYLE"));
 });
 
 test("validateViewsFromBlocks deduplicates IDs, warns on non-calcdown libs, and keeps valid views", () => {

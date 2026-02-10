@@ -85,6 +85,10 @@ export function renderInputsForm(opts: RenderInputsOptions): void {
       const isZeroDecimal = isZeroDecimalCurrency(def);
       const forceWholeNumber = isInteger || isZeroDecimal;
       input.step = forceWholeNumber ? "1" : typeName === "percent" ? "0.1" : "0.01";
+      const min = def.constraints?.min;
+      const max = def.constraints?.max;
+      if (typeof min === "number" && Number.isFinite(min)) input.min = String(min);
+      if (typeof max === "number" && Number.isFinite(max)) input.max = String(max);
       const normalizedInitial =
         typeof initialValue === "number"
           ? isInteger

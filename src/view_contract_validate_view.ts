@@ -5,6 +5,7 @@
 
 import type { CalcdownMessage } from "./types.js";
 import { ParsedView } from "./views.js";
+import { parseExpression } from "./calcscript/parser.js";
 import { asString, bannedKeys, defaultLabelForKey, err, isPlainObject, sanitizeId } from "./view_contract_common.js";
 import { validateFormat } from "./view_contract_format.js";
 import type {
@@ -14,6 +15,10 @@ import type {
   CalcdownTableView,
   CalcdownView,
   ChartAxisSpec,
+  ConditionalFormatPresetStyle,
+  ConditionalFormatRule,
+  ConditionalFormatStyle,
+  ConditionalFormatStyleObject,
   LayoutItem,
   LayoutSpec,
   TableViewColumn,
@@ -67,6 +72,82 @@ function validateTableColumns(raw: unknown, line: number, messages: CalcdownMess
   if (raw === undefined) return null;
   if (!Array.isArray(raw)) return null;
   const cols: TableViewColumn[] = [];
+
+  const validateConditionalStyle = (styleRaw: unknown): ConditionalFormatStyle | null => {
+    if (typeof styleRaw === "string") {
+      const preset =
+        styleRaw === "positive" ||
+        styleRaw === "negative" ||
+        styleRaw === "neutral" ||
+        styleRaw === "warning" ||
+        styleRaw === "highlight"
+          ? (styleRaw as ConditionalFormatPresetStyle)
+          : null;
+      if (!preset) {
+        err(messages, line, "CD_VIEW_TABLE_CONDFORM_STYLE", "conditionalFormat.style must be a supported preset or style object");
+        return null;
+      }
+      return preset;
+    }
+
+    if (!isPlainObject(styleRaw)) {
+      err(messages, line, "CD_VIEW_TABLE_CONDFORM_STYLE", "conditionalFormat.style must be a supported preset or style object");
+      return null;
+    }
+
+    const allowedKeys = new Set(["color", "backgroundColor", "fontWeight"]);
+    const out: ConditionalFormatStyleObject = Object.create(null);
+    for (const key of Object.keys(styleRaw)) {
+      if (!allowedKeys.has(key)) {
+        err(messages, line, "CD_VIEW_TABLE_CONDFORM_STYLE", `Unsupported conditionalFormat.style key: ${key}`);
+        continue;
+      }
+      const val = asString(styleRaw[key]);
+      if (!val) {
+        err(messages, line, "CD_VIEW_TABLE_CONDFORM_STYLE", `conditionalFormat.style.${key} must be a non-empty string`);
+        continue;
+      }
+      (out as Record<string, string>)[key] = val;
+    }
+
+    if (Object.keys(out).length === 0) {
+      err(messages, line, "CD_VIEW_TABLE_CONDFORM_STYLE", "conditionalFormat.style object must include at least one supported property");
+      return null;
+    }
+    return out;
+  };
+
+  const validateConditionalFormat = (cfRaw: unknown): ConditionalFormatRule[] | null => {
+    if (cfRaw === undefined) return null;
+    if (!Array.isArray(cfRaw)) {
+      err(messages, line, "CD_VIEW_TABLE_CONDFORM_ARRAY", "conditionalFormat must be an array");
+      return null;
+    }
+    const rules: ConditionalFormatRule[] = [];
+    for (const ruleRaw of cfRaw) {
+      if (!isPlainObject(ruleRaw)) {
+        err(messages, line, "CD_VIEW_TABLE_CONDFORM_RULE", "conditionalFormat rules must be objects");
+        continue;
+      }
+      const when = asString(ruleRaw.when);
+      if (!when) {
+        err(messages, line, "CD_VIEW_TABLE_CONDFORM_WHEN", "conditionalFormat.when must be a non-empty string");
+        continue;
+      }
+      try {
+        parseExpression(when);
+      } catch (e) {
+        err(messages, line, "CD_VIEW_TABLE_CONDFORM_WHEN", e instanceof Error ? e.message : "Invalid conditionalFormat.when expression");
+        continue;
+      }
+
+      const style = validateConditionalStyle(ruleRaw.style);
+      if (!style) continue;
+      rules.push(Object.assign(Object.create(null), { when, style }));
+    }
+    return rules.length ? rules : null;
+  };
+
   for (const c of raw) {
     if (!isPlainObject(c)) continue;
     const key = asString(c.key);
@@ -77,7 +158,8 @@ function validateTableColumns(raw: unknown, line: number, messages: CalcdownMess
     }
     const label = asString(c.label) ?? defaultLabelForKey(key);
     const format = validateFormat(c.format, line, messages) ?? undefined;
-    cols.push(Object.assign(Object.create(null), { key, label, ...(format ? { format } : {}) }));
+    const conditionalFormat = validateConditionalFormat(c.conditionalFormat) ?? undefined;
+    cols.push(Object.assign(Object.create(null), { key, label, ...(format ? { format } : {}), ...(conditionalFormat ? { conditionalFormat } : {}) }));
   }
   return cols.length ? cols : null;
 }

@@ -6,6 +6,7 @@
 import {
   CalcdownMessage,
   FencedCodeBlock,
+  InputConstraints,
   InputDefinition,
   InputType,
   InputValue,
@@ -13,6 +14,7 @@ import {
 import { parseIsoDate } from "./util/date.js";
 
 const coreTypes = new Set(["string", "boolean", "number", "integer", "decimal", "percent", "currency", "date", "datetime"]);
+const numericTypes = new Set(["number", "integer", "decimal", "percent", "currency"]);
 
 function normalizeTypeName(name: string): string {
   const trimmed = name.trim();
@@ -46,10 +48,6 @@ function parseInputType(raw: string): InputType {
   }
 
   const close = trimmed.lastIndexOf(closeChar);
-  if (close === -1 || close < open) {
-    const name = normalizeTypeName(trimmed);
-    return { name, args: [], raw: trimmed };
-  }
 
   const name = normalizeTypeName(trimmed.slice(0, open));
   const argsText = trimmed.slice(open + 1, close).trim();
@@ -101,6 +99,75 @@ function parseDefaultValue(type: InputType, text: string): InputValue {
   }
 }
 
+function splitDefaultAndConstraints(defaultGroup: string): { defaultText: string; constraintsText: string | null } {
+  const trimmed = defaultGroup.trim();
+  if (!trimmed.endsWith("]")) return { defaultText: trimmed, constraintsText: null };
+  const open = trimmed.lastIndexOf("[");
+  if (open === -1) return { defaultText: trimmed, constraintsText: null };
+  if (open > 0 && !/\s/.test(trimmed[open - 1] ?? "")) return { defaultText: trimmed, constraintsText: null };
+
+  const defaultText = trimmed.slice(0, open).trim();
+  if (!defaultText) return { defaultText: trimmed, constraintsText: null };
+  const constraintsText = trimmed.slice(open + 1, trimmed.length - 1).trim();
+  return { defaultText, constraintsText };
+}
+
+function parseConstraints(text: string): InputConstraints {
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("Invalid constraints: empty list");
+
+  const out: InputConstraints = Object.create(null);
+  const parts = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  for (const part of parts) {
+    const m = part.match(/^(min|max)\s*:\s*(.+)$/);
+    if (!m) throw new Error(`Invalid constraint: ${part}`);
+    const key = m[1] as "min" | "max";
+    const rawValue = (m[2] ?? "").trim();
+    if (!rawValue) throw new Error(`Invalid constraint: ${part}`);
+    const n = Number(rawValue);
+    if (!Number.isFinite(n)) throw new Error(`Invalid ${key} constraint: ${rawValue}`);
+    if (Object.prototype.hasOwnProperty.call(out, key)) throw new Error(`Duplicate constraint: ${key}`);
+    out[key] = n;
+  }
+
+  const min = out.min;
+  const max = out.max;
+  if (typeof min === "number" && typeof max === "number" && min > max) {
+    throw new Error("Invalid constraints: min must be <= max");
+  }
+
+  return out;
+}
+
+function isIntegerConstrainedType(type: InputType): boolean {
+  if (type.name === "integer") return true;
+  if (type.name !== "currency") return false;
+  const code = (type.args[0] ?? "").trim().toUpperCase();
+  return code === "ISK";
+}
+
+function assertConstraintsAreSupported(type: InputType, defaultValue: InputValue, constraints: InputConstraints): void {
+  if (constraints.min === undefined && constraints.max === undefined) {
+    throw new Error("Invalid constraints: expected min and/or max");
+  }
+  if (!numericTypes.has(type.name) && typeof defaultValue !== "number") {
+    throw new Error("Invalid constraints: only numeric inputs support min/max");
+  }
+
+  if (isIntegerConstrainedType(type)) {
+    if (constraints.min !== undefined && !Number.isInteger(constraints.min)) throw new Error("Invalid constraints: min must be integer");
+    if (constraints.max !== undefined && !Number.isInteger(constraints.max)) throw new Error("Invalid constraints: max must be integer");
+  }
+}
+
+function assertDefaultWithinConstraints(defaultValue: InputValue, constraints: InputConstraints): void {
+  if (typeof defaultValue !== "number") return;
+  const min = constraints.min;
+  const max = constraints.max;
+  if (typeof min === "number" && defaultValue < min) throw new Error(`Default is below min: ${min}`);
+  if (typeof max === "number" && defaultValue > max) throw new Error(`Default is above max: ${max}`);
+}
+
 export function parseInputsBlock(block: FencedCodeBlock): {
   inputs: InputDefinition[];
   messages: CalcdownMessage[];
@@ -136,22 +203,29 @@ export function parseInputsBlock(block: FencedCodeBlock): {
       continue;
     }
 
-    const name = m[1];
-    const typeRaw = m[2];
-    const defaultGroup = m[3];
-    if (!name || !typeRaw || defaultGroup === undefined) {
-      messages.push({
-        severity: "error",
-        code: "CD_INPUT_INVALID_LINE",
-        message: `Invalid input line: ${withoutComment}`,
-        line: lineNumber,
-        blockLang: block.lang,
-      });
-      continue;
-    }
+    const name = m[1]!;
+    const typeRaw = m[2]!;
+    const defaultGroup = m[3]!;
 
     const type = parseInputType(typeRaw);
-    const defaultText = defaultGroup.trim();
+    const split = splitDefaultAndConstraints(defaultGroup);
+    const defaultText = split.defaultText;
+    let constraints: InputConstraints | null = null;
+    if (split.constraintsText !== null) {
+      try {
+        constraints = parseConstraints(split.constraintsText);
+      } catch (err) {
+        messages.push({
+          severity: "error",
+          code: "CD_INPUT_INVALID_CONSTRAINTS",
+          message: err instanceof Error ? err.message : String(err),
+          line: lineNumber,
+          blockLang: block.lang,
+          nodeName: name,
+        });
+        continue;
+      }
+    }
 
     if (seen.has(name)) {
       messages.push({
@@ -166,9 +240,9 @@ export function parseInputsBlock(block: FencedCodeBlock): {
     }
     seen.add(name);
 
+    let defaultValue: InputValue;
     try {
-      const defaultValue = parseDefaultValue(type, defaultText);
-      inputs.push({ name, type, defaultText, defaultValue, line: lineNumber });
+      defaultValue = parseDefaultValue(type, defaultText);
     } catch (err) {
       messages.push({
         severity: "error",
@@ -178,7 +252,36 @@ export function parseInputsBlock(block: FencedCodeBlock): {
         blockLang: block.lang,
         nodeName: name,
       });
+      continue;
     }
+
+    if (constraints) {
+      try {
+        assertConstraintsAreSupported(type, defaultValue, constraints);
+        assertDefaultWithinConstraints(defaultValue, constraints);
+      } catch (err) {
+        messages.push({
+          severity: "error",
+          code: "CD_INPUT_INVALID_CONSTRAINTS",
+          message: err instanceof Error ? err.message : String(err),
+          line: lineNumber,
+          blockLang: block.lang,
+          nodeName: name,
+        });
+        continue;
+      }
+    }
+
+    inputs.push(
+      Object.assign(Object.create(null), {
+        name,
+        type,
+        defaultText,
+        defaultValue,
+        ...(constraints ? { constraints } : {}),
+        line: lineNumber,
+      })
+    );
   }
 
   return { inputs, messages };

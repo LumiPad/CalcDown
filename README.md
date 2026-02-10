@@ -40,7 +40,7 @@ For multi-document projects, CalcDown 1.0 also defines:
 ````md
 ---
 title: Savings growth
-calcdown: 1.0
+calcdown: 1.1
 ---
 
 ``` inputs
@@ -74,8 +74,8 @@ const final_balance = std.data.last(balances);
 ## Docs
 
 - `PURPOSE.md` — project goals and thesis
-- `docs/calcdown-1.0.md` — **current** file format + editor protocol
-- `docs/stdlib-1.0.md` — **current** standard library
+- `docs/calcdown-1.1.md` — **current** file format + editor protocol
+- `docs/stdlib-1.1.md` — **current** standard library
 - `docs/integration.md` — embedding CalcDown in other tools
 - `docs/integration-example.html` — copy/paste integration template
 - `docs/examples/*.calc.md` — executable examples (use latest spec)
@@ -145,7 +145,7 @@ Minimal embed (no bundler required):
 
   installCalcdownStyles();
 
-  const markdown = `---\ncalcdown: 1.0\n---\n\n\`\`\` calc\nconst x = 1 + 2;\n\`\`\``;
+  const markdown = `---\ncalcdown: 1.1\n---\n\n\`\`\` calc\nconst x = 1 + 2;\n\`\`\``;
   mountCalcdown(document.getElementById("calcdown"), markdown, { showMessages: true });
 </script>
 ```

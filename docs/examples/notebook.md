@@ -1,6 +1,6 @@
 ---
-title: Notebook example (CalcDown 1.0)
-calcdown: 1.0
+title: Notebook example (CalcDown 1.1)
+calcdown: 1.1
 ---
 
 # Notebook example (mixed Markdown + CalcDown)

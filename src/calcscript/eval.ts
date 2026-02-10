@@ -129,6 +129,18 @@ function evalExpr(expr: Expr, env: Record<string, unknown>, ctx: EvalContext): u
       }
       return safeGet(obj, prop);
     }
+    case "index": {
+      const obj = evalExpr(expr.object, env, ctx);
+      const idx = evalExpr(expr.index, env, ctx);
+      if (!Array.isArray(obj)) throw new Error("Indexing requires an array");
+      if (typeof idx !== "number" || !Number.isFinite(idx) || !Number.isInteger(idx) || idx < 0) {
+        throw new Error("Index must be a non-negative integer");
+      }
+      if (idx >= obj.length) throw new Error("Index out of bounds");
+      const key = String(idx);
+      if (!Object.prototype.hasOwnProperty.call(obj, key)) throw new Error("Missing array element");
+      return obj[idx];
+    }
     case "call": {
       if (!isStdMemberPath(expr.callee)) {
         throw new Error("Only std.* function calls are supported in this evaluator");
@@ -156,8 +168,28 @@ function evalExpr(expr: Expr, env: Record<string, unknown>, ctx: EvalContext): u
         for (let i = 0; i < params.length; i++) {
           const param = params[i];
           if (param === undefined) throw new Error("Invalid arrow function parameter");
-          if (param === "std") throw new Error("The identifier 'std' is reserved and cannot be used as an arrow parameter");
-          child[param] = args[i];
+
+          const bind = (name: string, value: unknown): void => {
+            if (name === "std") throw new Error("The identifier 'std' is reserved and cannot be used as an arrow parameter");
+            child[name] = value;
+          };
+
+          if (param.kind === "identifier") {
+            bind(param.name, args[i]);
+            continue;
+          }
+          if (param.kind === "object") {
+            const src = args[i];
+            if (!src || typeof src !== "object" || Array.isArray(src)) {
+              throw new Error("Object destructuring requires an object argument");
+            }
+            for (const p of param.properties) {
+              bind(p.binding, safeGet(src, p.key));
+            }
+            continue;
+          }
+          const _exhaustive: never = param;
+          return _exhaustive;
         }
         return evalExpr(body, child, ctx);
       };

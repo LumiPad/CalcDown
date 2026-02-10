@@ -12,6 +12,7 @@ export type Expr =
   | BinaryExpr
   | ConditionalExpr
   | MemberExpr
+  | IndexExpr
   | CallExpr
   | ArrowFunctionExpr
   | ObjectLiteralExpr;
@@ -62,15 +63,38 @@ export interface MemberExpr {
   property: string;
 }
 
+export interface IndexExpr {
+  kind: "index";
+  object: Expr;
+  index: Expr;
+}
+
 export interface CallExpr {
   kind: "call";
   callee: Expr;
   args: Expr[];
 }
 
+export type ArrowParam = ArrowIdentifierParam | ArrowObjectParam;
+
+export interface ArrowIdentifierParam {
+  kind: "identifier";
+  name: string;
+}
+
+export interface ArrowObjectParam {
+  kind: "object";
+  properties: ArrowObjectProperty[];
+}
+
+export interface ArrowObjectProperty {
+  key: string;
+  binding: string;
+}
+
 export interface ArrowFunctionExpr {
   kind: "arrow";
-  params: string[];
+  params: ArrowParam[];
   body: Expr;
 }
 

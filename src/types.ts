@@ -45,11 +45,17 @@ export interface InputType {
   raw: string;
 }
 
+export interface InputConstraints {
+  min?: number;
+  max?: number;
+}
+
 export interface InputDefinition {
   name: string;
   type: InputType;
   defaultText: string;
   defaultValue: InputValue;
+  constraints?: InputConstraints;
   line: number;
 }
 

@@ -44,6 +44,7 @@ const EXAMPLES: Record<string, string> = Object.freeze({
   invoice: new URL("../docs/examples/invoice.calc.md", import.meta.url).toString(),
   cashflow: new URL("../docs/examples/simple-cashflow.calc.md", import.meta.url).toString(),
   charts: new URL("../docs/examples/charts.calc.md", import.meta.url).toString(),
+  "calcdown-demo": new URL("../docs/examples/calcdown-demo.calc.md", import.meta.url).toString(),
 });
 
 function readChartMode(): ChartMode {

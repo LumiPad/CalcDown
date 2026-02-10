@@ -13,7 +13,7 @@ export type Token =
       value: "+" | "-" | "*" | "/" | "**" | "&" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "!";
       pos: number;
     }
-  | { type: "punct"; value: "(" | ")" | "." | "," | "{" | "}" | ":" | "?"; pos: number }
+  | { type: "punct"; value: "(" | ")" | "." | "," | "{" | "}" | "[" | "]" | ":" | "?"; pos: number }
   | { type: "arrow"; pos: number }
   | { type: "eof"; pos: number };
 
@@ -72,7 +72,18 @@ export class Tokenizer {
     const ch = this.src[this.i];
     if (ch === undefined) return { type: "eof", pos };
 
-    if (ch === "(" || ch === ")" || ch === "." || ch === "," || ch === "{" || ch === "}" || ch === ":" || ch === "?") {
+    if (
+      ch === "(" ||
+      ch === ")" ||
+      ch === "." ||
+      ch === "," ||
+      ch === "{" ||
+      ch === "}" ||
+      ch === "[" ||
+      ch === "]" ||
+      ch === ":" ||
+      ch === "?"
+    ) {
       this.i++;
       return { type: "punct", value: ch, pos };
     }

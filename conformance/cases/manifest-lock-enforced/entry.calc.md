@@ -1,6 +1,6 @@
 ---
 title: Conformance — Manifest lock enforcement
-calcdown: 1.0
+calcdown: 1.1
 ---
 
 # Manifest lock enforcement

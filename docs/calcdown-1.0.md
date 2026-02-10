@@ -1,6 +1,6 @@
 # CalcDown 1.0 (Specification)
 
-Status: **1.0**. CalcDown is a text-first, Git-friendly format for “spreadsheet-like” models: typed inputs and data, a deterministic compute graph, and declarative views.
+Status: **1.0** (superseded by 1.1; see `docs/calcdown-1.1.md`). CalcDown is a text-first, Git-friendly format for “spreadsheet-like” models: typed inputs and data, a deterministic compute graph, and declarative views.
 
 This document specifies **CalcDown 1.0** (the file format, project files, execution model, Editor Protocol, and expected tooling). The companion standard library is specified in `docs/stdlib-1.0.md`.
 

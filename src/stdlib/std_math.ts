@@ -29,22 +29,28 @@ export function createMathModule(): Readonly<Record<string, unknown>> {
     minOf(xs: unknown): number {
       if (!Array.isArray(xs)) throw new Error("minOf: expected array");
       if (xs.length === 0) throw new Error("minOf: empty array");
-      let min: number | null = null;
-      for (const v of xs) {
+      const first = xs[0];
+      if (typeof first !== "number" || !Number.isFinite(first)) throw new Error("minOf: expected finite number array");
+      let min = first;
+      for (let i = 1; i < xs.length; i++) {
+        const v = xs[i];
         if (typeof v !== "number" || !Number.isFinite(v)) throw new Error("minOf: expected finite number array");
-        min = min === null ? v : Math.min(min, v);
+        min = Math.min(min, v);
       }
-      return min ?? 0;
+      return min;
     },
     maxOf(xs: unknown): number {
       if (!Array.isArray(xs)) throw new Error("maxOf: expected array");
       if (xs.length === 0) throw new Error("maxOf: empty array");
-      let max: number | null = null;
-      for (const v of xs) {
+      const first = xs[0];
+      if (typeof first !== "number" || !Number.isFinite(first)) throw new Error("maxOf: expected finite number array");
+      let max = first;
+      for (let i = 1; i < xs.length; i++) {
+        const v = xs[i];
         if (typeof v !== "number" || !Number.isFinite(v)) throw new Error("maxOf: expected finite number array");
-        max = max === null ? v : Math.max(max, v);
+        max = Math.max(max, v);
       }
-      return max ?? 0;
+      return max;
     },
     round(x: number, digits = 0): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("round: x must be finite");
@@ -59,7 +65,6 @@ export function createMathModule(): Readonly<Record<string, unknown>> {
       const abs = Math.abs(digits);
       if (abs > 12) throw new Error("round: digits out of range");
       const factor = 10 ** abs;
-      if (!Number.isFinite(factor) || factor === 0) throw new Error("round: digits out of range");
 
       if (digits > 0) return roundHalfAwayFromZero(x * factor) / factor;
       return roundHalfAwayFromZero(x / factor) * factor;
@@ -99,21 +104,15 @@ export function createMathModule(): Readonly<Record<string, unknown>> {
     },
     sin(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("sin: x must be finite");
-      const y = Math.sin(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.sin(x);
     },
     cos(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("cos: x must be finite");
-      const y = Math.cos(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.cos(x);
     },
     tan(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("tan: x must be finite");
-      const y = Math.tan(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.tan(x);
     },
     asin(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("asin: x must be finite");
@@ -129,16 +128,12 @@ export function createMathModule(): Readonly<Record<string, unknown>> {
     },
     atan(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("atan: x must be finite");
-      const y = Math.atan(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.atan(x);
     },
     atan2(y: number, x: number): number {
       if (typeof y !== "number" || !Number.isFinite(y)) throw new Error("atan2: y must be finite");
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("atan2: x must be finite");
-      const out = Math.atan2(y, x);
-      if (!Number.isFinite(out)) throw new Error("Non-finite numeric result");
-      return out;
+      return Math.atan2(y, x);
     },
     sinh(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("sinh: x must be finite");
@@ -154,27 +149,19 @@ export function createMathModule(): Readonly<Record<string, unknown>> {
     },
     tanh(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("tanh: x must be finite");
-      const y = Math.tanh(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.tanh(x);
     },
     ceil(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("ceil: x must be finite");
-      const y = Math.ceil(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.ceil(x);
     },
     floor(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("floor: x must be finite");
-      const y = Math.floor(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.floor(x);
     },
     trunc(x: number): number {
       if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("trunc: x must be finite");
-      const y = Math.trunc(x);
-      if (!Number.isFinite(y)) throw new Error("Non-finite numeric result");
-      return y;
+      return Math.trunc(x);
     },
     pow(base: number, exp: number): number {
       if (typeof base !== "number" || !Number.isFinite(base)) throw new Error("pow: base must be finite");

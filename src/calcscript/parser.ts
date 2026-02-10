@@ -3,7 +3,7 @@
  * Intent: Implement deterministic grammar and operator precedence without runtime code generation.
  */
 
-import { CallExpr, Expr, IdentifierExpr, MemberExpr } from "./ast.js";
+import { ArrowParam, ArrowObjectProperty, CallExpr, Expr, IdentifierExpr, MemberExpr } from "./ast.js";
 import { CalcScriptSyntaxError, Token, Tokenizer } from "./tokenizer.js";
 
 export function parseExpression(src: string): Expr {
@@ -136,28 +136,93 @@ function parseComparison(t: Tokenizer): Expr {
   }
 }
 
-function tryParseArrowParams(t: Tokenizer): string[] | null {
+function parseArrowParam(t: Tokenizer): ArrowParam | null {
   const tok = t.peek();
   if (tok.type === "identifier") {
     t.next();
-    return [tok.value];
+    return { kind: "identifier", name: tok.value };
+  }
+
+  if (tok.type === "punct" && tok.value === "{") {
+    const mark = t.mark();
+    t.next();
+
+    const properties: ArrowObjectProperty[] = [];
+    const next = t.peek();
+    if (next.type === "punct" && next.value === "}") {
+      t.next();
+      return { kind: "object", properties };
+    }
+
+    while (true) {
+      const keyTok = t.next();
+      if (keyTok.type !== "identifier") {
+        t.reset(mark);
+        return null;
+      }
+      const key = keyTok.value;
+
+      let binding = key;
+      const afterKey = t.peek();
+      if (afterKey.type === "punct" && afterKey.value === ":") {
+        t.next();
+        const bindTok = t.next();
+        if (bindTok.type !== "identifier") {
+          t.reset(mark);
+          return null;
+        }
+        binding = bindTok.value;
+      }
+
+      properties.push({ key, binding });
+
+      const sep = t.peek();
+      if (sep.type === "punct" && sep.value === ",") {
+        t.next();
+        const maybeClose = t.peek();
+        if (maybeClose.type === "punct" && maybeClose.value === "}") {
+          t.next();
+          break;
+        }
+        continue;
+      }
+      if (sep.type === "punct" && sep.value === "}") {
+        t.next();
+        break;
+      }
+
+      t.reset(mark);
+      return null;
+    }
+
+    return { kind: "object", properties };
+  }
+
+  return null;
+}
+
+function tryParseArrowParams(t: Tokenizer): ArrowParam[] | null {
+  const tok = t.peek();
+  if (tok.type === "identifier") {
+    t.next();
+    return [{ kind: "identifier", name: tok.value }];
   }
   if (tok.type === "punct" && tok.value === "(") {
     const mark = t.mark();
     t.next();
-    const params: string[] = [];
+    const params: ArrowParam[] = [];
     const next = t.peek();
     if (next.type === "punct" && next.value === ")") {
       t.next();
       return params;
     }
     while (true) {
-      const id = t.next();
-      if (id.type !== "identifier") {
+      const param = parseArrowParam(t);
+      if (!param) {
         t.reset(mark);
         return null;
       }
-      params.push(id.value);
+      params.push(param);
       const sep = t.peek();
       if (sep.type === "punct" && sep.value === ",") {
         t.next();
@@ -269,6 +334,16 @@ function parsePostfix(t: Tokenizer): Expr {
         throw new CalcScriptSyntaxError("Expected ')'", close.pos);
       }
       expr = { kind: "call", callee: expr, args };
+      continue;
+    }
+    if (tok.type === "punct" && tok.value === "[") {
+      t.next();
+      const index = parseArrow(t);
+      const close = t.next();
+      if (!(close.type === "punct" && close.value === "]")) {
+        throw new CalcScriptSyntaxError("Expected ']'", close.pos);
+      }
+      expr = { kind: "index", object: expr, index };
       continue;
     }
     return expr;

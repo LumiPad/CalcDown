@@ -118,6 +118,27 @@ test("CalcScript cannot shadow std in arrow params", () => {
   assert.ok(evaluated.messages.some((m) => m.severity === "error" && /arrow parameter/.test(m.message)));
 });
 
+test("CalcScript array indexing and arrow param destructuring", () => {
+  const src = `---\ncalcdown: 1.1\n---\n\n\`\`\`data\nname: items\nprimaryKey: id\ncolumns:\n  id: string\n  qty: integer\n  unit_price: number\n---\n{\"id\":\"a\",\"qty\":2,\"unit_price\":10}\n{\"id\":\"b\",\"qty\":1,\"unit_price\":5}\n\`\`\`\n\n\`\`\`calc\nconst xs = std.data.sequence(3);\nconst second = xs[1];\nconst totals = std.table.map(items, ({ qty, unit_price }) => qty * unit_price);\n\`\`\`\n`;
+  const parsed = parseProgram(src);
+  assert.deepEqual(parsed.messages, []);
+
+  const evaluated = evaluateProgram(parsed.program, {});
+  assert.deepEqual(evaluated.messages, []);
+
+  assert.equal(evaluated.values.second, 2);
+  assert.deepEqual(evaluated.values.totals, [20, 5]);
+});
+
+test("CalcScript cannot bind std via destructuring", () => {
+  const src = `---\ncalcdown: 1.1\n---\n\n\`\`\`calc\nconst xs = std.data.sequence(1);\nconst ys = std.data.scan(xs, ({ a: std }) => std, { seed: { a: 0 } });\n\`\`\`\n`;
+  const parsed = parseProgram(src);
+  assert.ok(parsed.messages.some((m) => m.severity === "error" && /arrow parameter/.test(m.message)));
+
+  const evaluated = evaluateProgram(parsed.program, {});
+  assert.ok(evaluated.messages.some((m) => m.severity === "error" && /arrow parameter/.test(m.message)));
+});
+
 test("CalcScript errors on non-finite numeric results", () => {
   const src = `---\ncalcdown: 0.5\n---\n\n\`\`\`calc\nconst a = 1e308 * 1e308;\nconst b = a + 1;\n\`\`\`\n`;
   const parsed = parseProgram(src);

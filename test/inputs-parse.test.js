@@ -21,6 +21,8 @@ test("inputs parser: handles core types, currency args, and custom types", () =>
         "n : Number = 1.5",
         "i : integer = -2",
         "p : percent = 0.12",
+        "rate : percent = 5.0 [min: 0, max: 100]",
+        "years : integer = 30 [min: 1, max: 50]",
         "isk : currency[isk] = 154.3",
         "usd : currency(\"usd\") = 12.34",
         "d : date = 2025-03-04",
@@ -49,6 +51,9 @@ test("inputs parser: handles core types, currency args, and custom types", () =>
   assert.equal(byName.p.type.name, "percent");
   assert.equal(byName.p.defaultValue, 0.12);
 
+  assert.deepEqual({ ...byName.rate.constraints }, { min: 0, max: 100 });
+  assert.deepEqual({ ...byName.years.constraints }, { min: 1, max: 50 });
+
   assert.equal(byName.isk.type.name, "currency");
   assert.deepEqual(byName.isk.type.args, ["ISK"]);
   assert.equal(byName.isk.defaultValue, 154);
@@ -73,6 +78,13 @@ test("inputs parser: reports invalid lines, invalid defaults, and duplicate name
         "bad_bool : boolean = maybe",
         "bad_int : integer = 1.2",
         "bad_date : date = nope",
+        "bad_constraints : number = 1 [min: x]",
+        "min_gt_max : number = 1 [min: 2, max: 1]",
+        "no_minmax : number = 1 [,]",
+        "string_constraints : string = \"x\" [min: 0]",
+        "int_constraints_nonint : integer = 1 [min: 0.5]",
+        "dup_constraints : number = 1 [min: 0, min: 1]",
+        "tight_constraints : number = 1[min: 0]",
         "x : number = 1",
         "x : number = 2",
         " # comment only",
@@ -84,6 +96,7 @@ test("inputs parser: reports invalid lines, invalid defaults, and duplicate name
   const found = new Set(codes(res.messages));
   assert.ok(found.has("CD_INPUT_INVALID_LINE"));
   assert.ok(found.has("CD_INPUT_INVALID_DEFAULT"));
+  assert.ok(found.has("CD_INPUT_INVALID_CONSTRAINTS"));
   assert.ok(found.has("CD_INPUT_DUPLICATE_NAME"));
 
   assert.equal(res.inputs.length, 1);

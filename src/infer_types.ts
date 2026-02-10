@@ -192,9 +192,19 @@ function inferStdTableMap(rows: Inferred, mapper: Expr, env: Record<string, Infe
   const rowObj: Inferred = { kind: "object", props: rowProps };
   const child: Record<string, Inferred> = Object.create(env);
   const p0 = mapper.params[0];
-  if (p0) child[p0] = rowObj;
+  if (p0) {
+    if (p0.kind === "identifier") {
+      child[p0.name] = rowObj;
+    } else if (p0.kind === "object") {
+      for (const p of p0.properties) {
+        const t = rows.columns[p.key];
+        child[p.binding] = t ? { kind: "scalar", type: t } : UNKNOWN;
+      }
+    }
+  }
+
   const p1 = mapper.params[1];
-  if (p1) child[p1] = scalar("integer");
+  if (p1 && p1.kind === "identifier") child[p1.name] = scalar("integer");
 
   const bodyType = inferExpr(mapper.body, child);
   if (bodyType.kind === "scalar") return vector(bodyType.type);
@@ -288,6 +298,16 @@ function inferExpr(expr: Expr, env: Record<string, Inferred>): Inferred {
     case "member": {
       const obj = inferExpr(expr.object, env);
       return inferMember(obj, expr.property);
+    }
+    case "index": {
+      const obj = inferExpr(expr.object, env);
+      if (obj.kind === "vector") return { kind: "scalar", type: obj.element };
+      if (obj.kind === "table") {
+        const props: Record<string, Inferred> = Object.create(null);
+        for (const [k, t] of Object.entries(obj.columns)) props[k] = { kind: "scalar", type: t };
+        return { kind: "object", props };
+      }
+      return UNKNOWN;
     }
     case "call": {
       const path = getMemberPath(expr.callee);

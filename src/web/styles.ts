@@ -251,6 +251,31 @@ export const CALCDOWN_BASE_CSS = `
   background: var(--calcdown-surface);
 }
 
+.calcdown-root td.cf-positive {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.calcdown-root td.cf-negative {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.calcdown-root td.cf-neutral {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.calcdown-root td.cf-warning {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.calcdown-root td.cf-highlight {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
 .calcdown-root .calcdown-messages {
   margin-top: 10px;
   white-space: pre-wrap;

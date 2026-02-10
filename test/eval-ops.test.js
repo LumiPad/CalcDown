@@ -37,6 +37,9 @@ test("eval_ops: scalar comparisons and strict equality semantics", () => {
   const a = new Date("2025-01-01T00:00:00Z");
   const b = new Date("2025-02-01T00:00:00Z");
   assert.equal(compareScalars("<", a, b), true);
+  assert.equal(compareScalars("<=", a, a), true);
+  assert.equal(compareScalars(">", b, a), true);
+  assert.equal(compareScalars(">=", b, b), true);
   assert.throws(() => compareScalars("<", "a", "b"), /expects numbers or dates/);
 
   assert.equal(strictEquals(1, 1), true);

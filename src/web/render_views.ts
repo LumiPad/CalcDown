@@ -4,7 +4,19 @@
  */
 
 import type { DataTable, InputType } from "../types.js";
-import { defaultLabelForKey, type CalcdownView, type LayoutItem, type LayoutSpec, type TableViewColumn, type ValueFormat } from "../view_contract.js";
+import { parseExpression } from "../calcscript/parser.js";
+import { evaluateExpression } from "../calcscript/eval.js";
+import { std } from "../stdlib/std.js";
+import {
+  defaultLabelForKey,
+  type CalcdownView,
+  type ConditionalFormatRule,
+  type ConditionalFormatStyle,
+  type LayoutItem,
+  type LayoutSpec,
+  type TableViewColumn,
+  type ValueFormat,
+} from "../view_contract.js";
 import { formatFormattedValue } from "./format.js";
 import { buildBarChartCard, buildComboChartCard, buildLineChartCard, type ChartCardClasses, type ChartSeriesSpec } from "./charts.js";
 
@@ -165,10 +177,60 @@ function inferredFormatForType(t: DataTable["columns"][string] | undefined): Val
   return undefined;
 }
 
+const CONDFORM_EXPR_CACHE = new Map<string, ReturnType<typeof parseExpression>>();
+const EMPTY_TABLE_PK_BY_ARRAY = new WeakMap<object, { primaryKey: string }>();
+
+function applyConditionalFormatting(
+  td: HTMLTableCellElement,
+  rules: ConditionalFormatRule[] | undefined,
+  value: unknown,
+  row: Record<string, unknown>
+): void {
+  if (!rules || rules.length === 0) return;
+
+  for (const rule of rules) {
+    const when = rule.when;
+    let expr = CONDFORM_EXPR_CACHE.get(when);
+    if (!expr) {
+      try {
+        expr = parseExpression(when);
+        CONDFORM_EXPR_CACHE.set(when, expr);
+      } catch {
+        continue;
+      }
+    }
+
+    let matches = false;
+    try {
+      const out = evaluateExpression(expr, { value, row }, std, EMPTY_TABLE_PK_BY_ARRAY);
+      matches = out === true;
+    } catch {
+      matches = false;
+    }
+    if (!matches) continue;
+
+    const style: ConditionalFormatStyle = rule.style;
+    if (typeof style === "string") {
+      td.classList.add(`cf-${style}`);
+      return;
+    }
+
+    if (style && typeof style === "object") {
+      const color = style.color;
+      const backgroundColor = style.backgroundColor;
+      const fontWeight = style.fontWeight;
+      if (typeof color === "string") td.style.color = color;
+      if (typeof backgroundColor === "string") td.style.backgroundColor = backgroundColor;
+      if (typeof fontWeight === "string") td.style.fontWeight = fontWeight;
+      return;
+    }
+  }
+}
+
 function buildTableView(
   title: string | null,
   sourceName: string,
-  columns: { key: string; label: string; format?: ValueFormat }[],
+  columns: TableViewColumn[],
   rows: Record<string, unknown>[],
   opts: { editable: boolean; schema?: DataTable; onEditTableCell?: (ev: TableEditEvent) => void }
 ): HTMLElement {
@@ -214,6 +276,8 @@ function buildTableView(
     for (const c of columns) {
       const td = document.createElement("td");
       const value = Object.prototype.hasOwnProperty.call(row, c.key) ? row[c.key] : undefined;
+
+      applyConditionalFormatting(td, c.conditionalFormat, value, row);
 
       if (opts.editable && opts.onEditTableCell && pkKey && pk && schemaCols && c.key in schemaCols) {
         const type = schemaCols[c.key]!;
@@ -342,7 +406,13 @@ function buildLayoutItem(
     const cols = (target.spec.columns && target.spec.columns.length ? target.spec.columns : defaultColumnsForSource(sourceName, rowObjs, ctx.schemas)).map((c) => {
       const fmtRaw = c.format ? (c.format as ValueFormat) : undefined;
       const fmt = resolveFormat(fmtRaw, schemaCols ? schemaCols[c.key] : undefined);
-      return Object.assign(Object.create(null), { key: c.key, label: c.label }, fmt ? { format: fmt } : {});
+      const conditionalFormat = c.conditionalFormat;
+      return Object.assign(
+        Object.create(null),
+        { key: c.key, label: c.label },
+        fmt ? { format: fmt } : {},
+        conditionalFormat ? { conditionalFormat } : {}
+      );
     });
 
     const editable = Boolean(target.spec.editable && schema && !schema.source);

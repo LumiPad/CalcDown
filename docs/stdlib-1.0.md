@@ -1,6 +1,6 @@
 # CalcDown Standard Library 1.0
 
-Status: **1.0**. This document specifies the standard library object available as `std` when evaluating CalcScript expressions in CalcDown 1.0.
+Status: **1.0** (superseded by 1.1; see `docs/stdlib-1.1.md`). This document specifies the standard library object available as `std` when evaluating CalcScript expressions in CalcDown 1.0.
 
 CalcDown 1.0 does not change the standard library from 0.9.
 

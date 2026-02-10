@@ -12,6 +12,22 @@ function isZeroDecimalCurrencyType(type: InputType): boolean {
   return code === "ISK";
 }
 
+function enforceOverrideConstraints(def: InputDefinition, value: InputValue): InputValue {
+  const c = def.constraints;
+  if (!c) return value;
+  if (typeof value !== "number") return value;
+
+  const min = c.min;
+  const max = c.max;
+  if (typeof min === "number" && Number.isFinite(min) && value < min) {
+    throw new Error(`Invalid override for ${def.name} (must be >= ${min})`);
+  }
+  if (typeof max === "number" && Number.isFinite(max) && value > max) {
+    throw new Error(`Invalid override for ${def.name} (must be <= ${max})`);
+  }
+  return value;
+}
+
 export function normalizeOverrideValue(def: InputDefinition, value: unknown): InputValue {
   if (def.type.name === "date") {
     if (value instanceof Date) return value;
@@ -22,12 +38,12 @@ export function normalizeOverrideValue(def: InputDefinition, value: unknown): In
   if (def.type.name === "integer") {
     if (typeof value === "number") {
       if (!Number.isFinite(value)) throw new Error(`Invalid override for ${def.name} (expected integer)`);
-      return Math.trunc(value);
+      return enforceOverrideConstraints(def, Math.trunc(value));
     }
     if (typeof value === "string") {
       const n = Number(value);
       if (!Number.isFinite(n)) throw new Error(`Invalid override for ${def.name} (expected integer)`);
-      return Math.trunc(n);
+      return enforceOverrideConstraints(def, Math.trunc(n));
     }
     throw new Error(`Invalid override for ${def.name} (expected integer)`);
   }
@@ -36,12 +52,12 @@ export function normalizeOverrideValue(def: InputDefinition, value: unknown): In
     const forceInteger = isZeroDecimalCurrencyType(def.type);
     if (typeof value === "number") {
       if (!Number.isFinite(value)) throw new Error(`Invalid override for ${def.name} (expected number)`);
-      return forceInteger ? Math.round(value) : value;
+      return enforceOverrideConstraints(def, forceInteger ? Math.round(value) : value);
     }
     if (typeof value === "string") {
       const n = Number(value);
       if (!Number.isFinite(n)) throw new Error(`Invalid override for ${def.name} (expected number)`);
-      return forceInteger ? Math.round(n) : n;
+      return enforceOverrideConstraints(def, forceInteger ? Math.round(n) : n);
     }
     throw new Error(`Invalid override for ${def.name} (expected number)`);
   }
@@ -49,12 +65,12 @@ export function normalizeOverrideValue(def: InputDefinition, value: unknown): In
   if (typeof def.defaultValue === "number") {
     if (typeof value === "number") {
       if (!Number.isFinite(value)) throw new Error(`Invalid override for ${def.name} (expected number)`);
-      return value;
+      return enforceOverrideConstraints(def, value);
     }
     if (typeof value === "string") {
       const n = Number(value);
       if (!Number.isFinite(n)) throw new Error(`Invalid override for ${def.name} (expected number)`);
-      return n;
+      return enforceOverrideConstraints(def, n);
     }
     throw new Error(`Invalid override for ${def.name} (expected number)`);
   }

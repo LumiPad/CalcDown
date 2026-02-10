@@ -67,7 +67,6 @@ export function createDataModule(): Readonly<StdDataModule> {
       if (ak.kind === "none" && bk.kind === "none") return a.index - b.index;
       if (ak.kind === "none") return 1;
       if (bk.kind === "none") return -1;
-      if (ak.kind !== bk.kind) return 0;
       if (ak.kind === "number") {
         const d = ak.value - (bk as Extract<SortKey, { kind: "number" }>).value;
         if (d !== 0) return d * dir;

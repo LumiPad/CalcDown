@@ -40,6 +40,22 @@ export interface TableViewColumn {
   key: string;
   label: string;
   format?: ValueFormat;
+  conditionalFormat?: ConditionalFormatRule[];
+}
+
+export type ConditionalFormatPresetStyle = "positive" | "negative" | "neutral" | "warning" | "highlight";
+
+export interface ConditionalFormatStyleObject {
+  color?: string;
+  backgroundColor?: string;
+  fontWeight?: string;
+}
+
+export type ConditionalFormatStyle = ConditionalFormatPresetStyle | ConditionalFormatStyleObject;
+
+export interface ConditionalFormatRule {
+  when: string;
+  style: ConditionalFormatStyle;
 }
 
 export interface CalcdownTableView {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { createStd, std } from "../dist/stdlib/std.js";
+import { deepFreeze } from "../dist/stdlib/std_shared.js";
 
 function iso(date) {
   assert.ok(date instanceof Date);
@@ -26,11 +27,19 @@ test("std.math.mean / minOf / maxOf / round", () => {
   assert.equal(std.math.mean([2, 4, 6]), 4);
   assert.throws(() => std.math.mean([]), /mean: empty array/);
   assert.throws(() => std.math.mean([1, Number.POSITIVE_INFINITY]), /mean: expected finite number array/);
+  assert.throws(() => std.math.mean("nope"), /mean: expected array/);
+  assert.throws(() => std.math.mean([1, "2"]), /mean: expected finite number array/);
 
   assert.equal(std.math.minOf([2, -1, 5]), -1);
   assert.equal(std.math.maxOf([2, -1, 5]), 5);
   assert.throws(() => std.math.minOf([]), /minOf: empty array/);
   assert.throws(() => std.math.maxOf([]), /maxOf: empty array/);
+  assert.throws(() => std.math.minOf("nope"), /minOf: expected array/);
+  assert.throws(() => std.math.maxOf("nope"), /maxOf: expected array/);
+  assert.throws(() => std.math.minOf([Number.NaN]), /minOf: expected finite number array/);
+  assert.throws(() => std.math.maxOf([Number.NaN]), /maxOf: expected finite number array/);
+  assert.throws(() => std.math.minOf([1, Number.POSITIVE_INFINITY]), /minOf: expected finite number array/);
+  assert.throws(() => std.math.maxOf([1, Number.POSITIVE_INFINITY]), /maxOf: expected finite number array/);
 
   assert.equal(std.math.round(1.2345, 2), 1.23);
   assert.equal(std.math.round(1.235, 2), 1.24);
@@ -40,6 +49,8 @@ test("std.math.mean / minOf / maxOf / round", () => {
   assert.throws(() => std.math.round(Number.NaN), /round: x must be finite/);
   assert.throws(() => std.math.round(1, 1.5), /round: digits must be integer/);
   assert.throws(() => std.math.round(1, 99), /round: digits out of range/);
+  assert.throws(() => std.math.round(1, "2"), /round: digits must be integer/);
+  assert.throws(() => std.math.round(1, Number.POSITIVE_INFINITY), /round: digits must be integer/);
 });
 
 test("std.math.abs / sign / sqrt / exp / ln / log10 / trig / helpers / constants", () => {
@@ -50,6 +61,7 @@ test("std.math.abs / sign / sqrt / exp / ln / log10 / trig / helpers / constants
   assert.equal(std.math.sign(-10), -1);
   assert.equal(std.math.sign(0), 0);
   assert.equal(std.math.sign(10), 1);
+  assert.equal(std.math.sign(-0), 0);
   assert.throws(() => std.math.sign(Number.NaN), /sign: x must be finite/);
 
   assert.equal(std.math.sqrt(9), 3);
@@ -75,6 +87,7 @@ test("std.math.abs / sign / sqrt / exp / ln / log10 / trig / helpers / constants
   assert.throws(() => std.math.asin(2), /Non-finite numeric result/);
 
   approxEqual(std.math.sinh(0), 0);
+  assert.throws(() => std.math.sinh(1000), /Non-finite numeric result/);
   approxEqual(std.math.cosh(0), 1);
   approxEqual(std.math.tanh(0), 0);
 
@@ -112,10 +125,18 @@ test("std.math.abs / sign / sqrt / exp / ln / log10 / trig / helpers / constants
     "trunc",
   ]) {
     assert.throws(() => std.math[fn]("x"), new RegExp(`${fn}: x must be finite`));
+    assert.throws(() => std.math[fn](Number.POSITIVE_INFINITY), new RegExp(`${fn}: x must be finite`));
+  }
+  for (const fn of ["abs", "sign", "sqrt", "exp", "ln", "log10"]) {
+    assert.throws(() => std.math[fn](Number.POSITIVE_INFINITY), new RegExp(`${fn}: x must be finite`));
   }
   assert.throws(() => std.math.atan2("x", 0), /atan2: y must be finite/);
   assert.throws(() => std.math.pow("x", 2), /pow: base must be finite/);
   assert.throws(() => std.math.pow(2, "x"), /pow: exp must be finite/);
+  assert.throws(() => std.math.atan2(0, Number.POSITIVE_INFINITY), /atan2: x must be finite/);
+  assert.throws(() => std.math.atan2(Number.POSITIVE_INFINITY, 0), /atan2: y must be finite/);
+  assert.throws(() => std.math.pow(Number.POSITIVE_INFINITY, 2), /pow: base must be finite/);
+  assert.throws(() => std.math.pow(2, Number.POSITIVE_INFINITY), /pow: exp must be finite/);
 });
 
 test("std.text.concat / repeat", () => {
@@ -138,10 +159,82 @@ test("std.text.concat / repeat", () => {
   assert.throws(() => std.text.repeat(["ok", 1], 2), /repeat: expected string array/);
 });
 
+test("std.text basic string helpers", () => {
+  assert.equal(std.text.upper("aBc"), "ABC");
+  assert.deepEqual(std.text.upper(["a", "Bb"]), ["A", "BB"]);
+  assert.throws(() => std.text.upper(123), /upper: expected string or string array/);
+  assert.throws(() => std.text.upper(["ok", 1]), /upper: expected string array/);
+
+  assert.equal(std.text.lower("aBc"), "abc");
+  assert.deepEqual(std.text.lower(["A", "Bb"]), ["a", "bb"]);
+  assert.throws(() => std.text.lower(123), /lower: expected string or string array/);
+  assert.throws(() => std.text.lower(["ok", 1]), /lower: expected string array/);
+
+  assert.equal(std.text.trim("  hi \n"), "hi");
+  assert.deepEqual(std.text.trim([" a ", "b  "]), ["a", "b"]);
+  assert.throws(() => std.text.trim(123), /trim: expected string or string array/);
+  assert.throws(() => std.text.trim(["ok", 1]), /trim: expected string array/);
+
+  assert.equal(std.text.length("abc"), 3);
+  assert.deepEqual(std.text.length(["a", "bb"]), [1, 2]);
+  assert.throws(() => std.text.length(123), /length: expected string or string array/);
+  assert.throws(() => std.text.length(["ok", 1]), /length: expected string array/);
+
+  assert.equal(std.text.slice("hello", 1, 4), "ell");
+  assert.equal(std.text.slice("hello", 2), "llo");
+  assert.deepEqual(std.text.slice(["hello", "world"], 1, 3), ["el", "or"]);
+  assert.deepEqual(std.text.slice(["abcd", "efgh"], [1, 2]), ["bcd", "gh"]);
+  assert.throws(() => std.text.slice("x", 1.2), /slice: start must be integer/);
+  assert.throws(() => std.text.slice("x", 1, 1.2), /slice: end must be integer/);
+  assert.throws(() => std.text.slice(["ab"], [1, 2]), /slice: array length mismatch/);
+
+  assert.deepEqual(std.text.split("a,b,c", ","), ["a", "b", "c"]);
+  assert.deepEqual(std.text.split(["a|b", "c|d"], "|"), [
+    ["a", "b"],
+    ["c", "d"],
+  ]);
+  assert.throws(() => std.text.split("a,b", 1), /split: expected separator string/);
+  assert.throws(() => std.text.split(["ok", 1], ","), /split: expected string or string array/);
+  assert.throws(() => std.text.split(["a"], [",", "."]), /split: array length mismatch/);
+
+  assert.equal(std.text.startsWith("hello", "he"), true);
+  assert.deepEqual(std.text.startsWith(["he", "no"], "he"), [true, false]);
+  assert.throws(() => std.text.startsWith(["a"], ["a", "b"]), /startsWith: array length mismatch/);
+  assert.throws(() => std.text.startsWith("hello", 1), /startsWith: expected prefix string/);
+  assert.throws(() => std.text.startsWith(["ok", 1], "o"), /startsWith: expected string or string array/);
+
+  assert.equal(std.text.contains("hello", "ell"), true);
+  assert.deepEqual(std.text.contains(["a", "b"], ["a", "x"]), [true, false]);
+  assert.throws(() => std.text.contains("hello", 1), /contains: expected needle string/);
+  assert.throws(() => std.text.contains(["a"], ["a", "b"]), /contains: array length mismatch/);
+  assert.throws(() => std.text.contains(["ok", 1], "o"), /contains: expected string or string array/);
+
+  assert.equal(std.text.padStart("42", 5, "0"), "00042");
+  assert.equal(std.text.padStart("x", 3), "  x");
+  assert.deepEqual(std.text.padStart(["1", "22"], 3, "0"), ["001", "022"]);
+  assert.deepEqual(std.text.padStart(["1", "22"], 3), ["  1", " 22"]);
+  assert.throws(() => std.text.padStart("x", -1), /padStart: targetLength must be a non-negative integer/);
+  assert.throws(() => std.text.padStart("x", 1.5), /padStart: targetLength must be a non-negative integer/);
+  assert.throws(() => std.text.padStart("x", 3, 1), /padStart: padString must be a string/);
+  assert.throws(() => std.text.padStart(["ok", 1], 3), /padStart: expected string or string array/);
+
+  assert.equal(std.text.format("{0} of {1}", 3, 10), "3 of 10");
+  assert.deepEqual(std.text.format("X{0}", [1, 2, 3]), ["X1", "X2", "X3"]);
+  assert.deepEqual(std.text.format(["A{0}", "B{0}"], ["1", "2"]), ["A1", "B2"]);
+  const big = "9".repeat(400);
+  assert.equal(std.text.format(`{${big}}`, 1), `{${big}}`);
+  assert.throws(() => std.text.format(123, 1), /format: expected template string/);
+  assert.throws(() => std.text.format("{1}", "a"), /format: missing argument \{1\}/);
+  assert.throws(() => std.text.format("X{0}", [1], [2, 3]), /format: array length mismatch/);
+});
+
 test("std.data.sequence", () => {
   assert.deepEqual(std.data.sequence(0), []);
   assert.deepEqual(std.data.sequence(5), [1, 2, 3, 4, 5]);
   assert.deepEqual(std.data.sequence(3, { start: 0 }), [0, 1, 2]);
+  assert.deepEqual(std.data.sequence(3, {}), [1, 2, 3]);
+  assert.deepEqual(std.data.sequence(3, { start: null }), [1, 2, 3]);
+  assert.deepEqual(std.data.sequence(3, { step: null }), [1, 2, 3]);
   assert.deepEqual(std.data.sequence(4, { start: 10, step: 2 }), [10, 12, 14, 16]);
 
   assert.throws(() => std.data.sequence(-1), /sequence: count must be a non-negative integer/);
@@ -162,14 +255,15 @@ test("std.data.sortBy", () => {
     { id: "b", n: 1 },
     { id: "c", n: 2 },
     { id: "d" },
+    { id: "e" },
   ];
   assert.deepEqual(
     std.data.sortBy(rows, "n").map((r) => r.id),
-    ["b", "a", "c", "d"]
+    ["b", "a", "c", "d", "e"]
   );
   assert.deepEqual(
     std.data.sortBy(rows, "n", "desc").map((r) => r.id),
-    ["a", "c", "b", "d"]
+    ["a", "c", "b", "d", "e"]
   );
 
   const dateRows = [
@@ -204,8 +298,28 @@ test("std.data.sortBy", () => {
   assert.throws(() => std.data.sortBy(rows, ""), /sortBy: expected key string/);
   assert.throws(() => std.data.sortBy(rows, "__proto__"), /sortBy: disallowed key/);
   assert.throws(() => std.data.sortBy(rows, "n", "nope"), /sortBy: direction must be 'asc' or 'desc'/);
+  assert.throws(() => std.data.sortBy([1], "n"), /sortBy: expected row objects/);
+  assert.throws(() => std.data.sortBy([null], "n"), /sortBy: expected row objects/);
+  assert.throws(() => std.data.sortBy([{ n: Number.POSITIVE_INFINITY }], "n"), /sortBy: expected finite number keys/);
   assert.throws(() => std.data.sortBy([{ n: true }], "n"), /sortBy: unsupported key type/);
   assert.throws(() => std.data.sortBy([{ n: 1 }, { n: "x" }], "n"), /sortBy: mixed key types/);
+
+  // All-none keys cover the none/none stable-order branch.
+  const allNone = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  assert.deepEqual(
+    std.data.sortBy(allNone, "missing").map((r) => r.id),
+    ["a", "b", "c"]
+  );
+
+  // null keys also map to "none"
+  const nullKeys = [
+    { id: "a", n: null },
+    { id: "b", n: 1 },
+  ];
+  assert.deepEqual(
+    std.data.sortBy(nullKeys, "n").map((r) => r.id),
+    ["b", "a"]
+  );
 });
 
 test("std.data.last", () => {
@@ -252,6 +366,22 @@ test("std.data.scan", () => {
 
   assert.throws(() => std.data.scan("nope", () => 0, 0), /scan: expected array items/);
   assert.throws(() => std.data.scan([], "nope", 0), /scan: expected reducer function/);
+
+  // seedOrOptions object without own "seed" uses itself as the seed value.
+  const seedObj = { count: 0 };
+  const selfSeed = std.data.scan([1], (state, item) => ({ count: state.count + item }), seedObj);
+  assert.deepEqual(selfSeed, [{ count: 1 }]);
+
+  // "seed" present via prototype does not count as an own-property seed.
+  const proto = { seed: { n: 1 } };
+  const inherited = Object.create(proto);
+  const inheritedSeed = std.data.scan([0], (state) => state, inherited);
+  assert.equal(inheritedSeed[0], inherited);
+
+  // seedOrOptions can be any non-object state value.
+  const seedFn = () => 1;
+  const fnSeed = std.data.scan([0], (state) => state, seedFn);
+  assert.equal(fnSeed[0], seedFn);
 });
 
 test("std.table.col", () => {
@@ -359,6 +489,19 @@ test("std.table.groupBy / std.table.agg", () => {
     () => std.table.agg([{ key: Number.POSITIVE_INFINITY, rows: [] }], () => ({})),
     /agg: group.key must be string or finite number/
   );
+  assert.throws(() => std.table.agg([null], () => ({})), /agg: expected group objects/);
+  assert.throws(
+    () => std.table.agg([{ key: {}, rows: [] }], () => ({})),
+    /agg: group.key must be string or finite number/
+  );
+  assert.throws(
+    () => std.table.agg([{ key: "x", rows: [] }], () => []),
+    /agg: mapper must return an object/
+  );
+  assert.throws(
+    () => std.table.agg([{ key: "x", rows: [] }], () => ({ ["__proto__"]: 1 })),
+    /agg: disallowed key/
+  );
 });
 
 test("std.table.join", () => {
@@ -403,11 +546,31 @@ test("std.table.join", () => {
   const joinedNum = std.table.join([{ id: 1, n: 1 }], [{ id: 1, label: "one" }], { leftKey: "id", rightKey: "id" });
   assert.deepEqual(joinedNum.map((r) => Object.fromEntries(Object.entries(r))), [{ id: 1, n: 1, right_id: 1, label: "one" }]);
 
+  // Multiple matches for one left row.
+  const multi = std.table.join(
+    [{ id: "a", n: 1 }],
+    [
+      { id: "a", label: "A1" },
+      { id: "a", label: "A2" },
+    ],
+    { leftKey: "id", rightKey: "id" }
+  );
+  assert.deepEqual(multi.map((r) => r.label), ["A1", "A2"]);
+
   assert.throws(() => std.table.join("nope", right, { leftKey: "id", rightKey: "id" }), /join: expected leftRows array/);
   assert.throws(() => std.table.join(left, "nope", { leftKey: "id", rightKey: "id" }), /join: expected rightRows array/);
   assert.throws(() => std.table.join(left, right, null), /join: expected opts object/);
   assert.throws(() => std.table.join(left, right, { leftKey: "", rightKey: "id" }), /join: expected key string/);
+  assert.throws(() => std.table.join(left, right, { leftKey: 123, rightKey: "id" }), /join: leftKey must be string/);
+  assert.throws(() => std.table.join(left, right, { leftKey: "id", rightKey: 123 }), /join: rightKey must be string/);
+  assert.throws(() => std.table.join(left, right, { leftKey: "id", rightKey: "id", how: "nope" }), /join: how must be/);
   assert.throws(() => std.table.join([{ id: {} }], right, { leftKey: "id", rightKey: "id" }), /join: left key values must be string or finite number/);
+  assert.throws(
+    () => std.table.join(left, [{ id: {} }], { leftKey: "id", rightKey: "id" }),
+    /join: right key values must be string or finite number/
+  );
+  assert.throws(() => std.table.join(left, [null], { leftKey: "id", rightKey: "id" }), /join: expected right row objects/);
+  assert.throws(() => std.table.join([null], right, { leftKey: "id", rightKey: "id" }), /join: expected left row objects/);
 });
 
 test("std.lookup.index / std.lookup.get / std.lookup.xlookup", () => {
@@ -431,9 +594,47 @@ test("std.lookup.index / std.lookup.get / std.lookup.xlookup", () => {
   assert.throws(() => std.lookup.get(nidx, Number.POSITIVE_INFINITY), /lookup.get: key must be string or finite number/);
 
   assert.throws(() => std.lookup.index("nope", "code"), /lookup.index: expected rows array/);
+  assert.throws(() => std.lookup.index(rows, 123), /lookup.index: keyColumn must be string/);
   assert.throws(() => std.lookup.index(rows, "__proto__"), /lookup.index: disallowed key/);
+  assert.throws(() => std.lookup.index([null], "code"), /lookup.index: expected row objects/);
+  assert.throws(() => std.lookup.index([{ code: {} }], "code"), /lookup.index: key values must be string or finite number/);
+
+  assert.throws(() => std.lookup.get(null, "A"), /lookup.get: invalid index/);
+  assert.throws(() => std.lookup.get(123, "A"), /lookup.get: invalid index/);
+
+  // Cover the function-index path in asLookupIndex.
+  const sym = Object.getOwnPropertySymbols(idx)[0];
+  const fidx = () => {};
+  fidx[sym] = idx[sym];
+  assert.deepEqual(std.lookup.get(fidx, "A"), { code: "A", value: 10 });
+
+  // Force an empty bucket to cover bucket.length===0.
+  idx[sym].map.set("s:EMPTY", []);
+  assert.throws(() => std.lookup.get(idx, "EMPTY"), /lookup.get: key not found/);
+
   assert.throws(() => std.lookup.get({}, "A"), /lookup.get: invalid index/);
   assert.throws(() => std.lookup.xlookup("A", "nope", "code", "value"), /lookup.xlookup: expected rows array/);
+  assert.throws(() => std.lookup.xlookup("A", rows, 123, "value"), /lookup.xlookup: keyColumn must be string/);
+  assert.throws(() => std.lookup.xlookup("A", rows, "code", 123), /lookup.xlookup: valueColumn must be string/);
+  assert.throws(() => std.lookup.xlookup("A", rows, "__proto__", "value"), /lookup.xlookup: disallowed key/);
+  assert.throws(() => std.lookup.xlookup("A", rows, "code", "__proto__"), /lookup.xlookup: disallowed key/);
+  assert.throws(() => std.lookup.xlookup(Number.POSITIVE_INFINITY, rows, "code", "value"), /lookup.xlookup: key must be string or finite number/);
+  assert.throws(() => std.lookup.xlookup("A", [null], "code", "value"), /lookup.xlookup: expected row objects/);
+  assert.throws(() => std.lookup.xlookup("A", [{ code: {} }], "code", "value"), /lookup.xlookup: key values must be string or finite number/);
+  assert.equal(std.lookup.xlookup("Z", rows, "code", "value", undefined), undefined);
+});
+
+test("std_shared.deepFreeze handles cycles deterministically", () => {
+  const a = { x: 1 };
+  a.self = a;
+  deepFreeze(a);
+  assert.ok(Object.isFrozen(a));
+  assert.ok(Object.isFrozen(a.self));
+  assert.equal(deepFreeze(1), 1);
+  assert.equal(deepFreeze(null), null);
+  const fn = () => {};
+  deepFreeze(fn);
+  assert.ok(Object.isFrozen(fn));
 });
 
 test("std.date.addMonths", () => {
@@ -488,6 +689,22 @@ test("std.date.now / std.date.today (context)", () => {
   assert.throws(() => createStd({ currentDateTime: undefined }), /std: invalid currentDateTime/);
 });
 
+test("std.date.now / std.date.today (default context)", () => {
+  const now = std.date.now();
+  assert.ok(now instanceof Date);
+  assert.ok(Number.isFinite(now.getTime()));
+
+  const today = std.date.today();
+  assert.ok(today instanceof Date);
+  assert.equal(today.getUTCHours(), 0);
+  assert.equal(today.getUTCMinutes(), 0);
+  assert.equal(today.getUTCSeconds(), 0);
+
+  // Context object without an own currentDateTime key uses the system clock.
+  const ctx = createStd({});
+  assert.ok(Number.isFinite(ctx.date.now().getTime()));
+});
+
 test("std.finance.toMonthlyRate", () => {
   approxEqual(std.finance.toMonthlyRate(6.0), 0.06 / 12);
   assert.throws(() => std.finance.toMonthlyRate(Number.POSITIVE_INFINITY), /toMonthlyRate: annualPercent must be finite/);
@@ -519,6 +736,101 @@ test("std.finance.pmt", () => {
   assert.throws(() => std.finance.pmt(0.01, 10, 1, Number.NaN), /pmt: invalid arguments/);
   assert.throws(() => std.finance.pmt(0.01, 0, 1), /pmt: nper must be non-zero/);
   assert.throws(() => std.finance.pmt(0.01, 10, 1, 0, 2), /pmt: type must be 0 or 1/);
+});
+
+test("std.finance.ipmt / ppmt", () => {
+  const rate = 0.1;
+  const nper = 2;
+  const pv = -1000;
+  const payment = std.finance.pmt(rate, nper, pv);
+  approxEqual(payment, 576.1904761904762, 1e-12);
+
+  approxEqual(std.finance.ipmt(rate, 1, nper, pv), 100, 1e-12);
+  approxEqual(std.finance.ppmt(rate, 1, nper, pv), payment - 100, 1e-12);
+  approxEqual(std.finance.ipmt(rate, 1, nper, pv, 0, 0), std.finance.ipmt(rate, 1, nper, pv), 1e-12);
+  approxEqual(std.finance.ppmt(rate, 1, nper, pv, 0, 0), std.finance.ppmt(rate, 1, nper, pv), 1e-12);
+
+  approxEqual(std.finance.ipmt(rate, 2, nper, pv), 52.38095238095238, 1e-12);
+  approxEqual(std.finance.ppmt(rate, 2, nper, pv), payment - 52.38095238095238, 1e-12);
+
+  // type=1 (payments at beginning) implies ipmt(per=1)=0
+  assert.equal(std.finance.ipmt(rate, 1, nper, pv, 0, 1), 0);
+  assert.ok(Number.isFinite(std.finance.ipmt(rate, 2, nper, pv, 0, 1)));
+  approxEqual(
+    std.finance.ppmt(rate, 2, nper, pv, 0, 1),
+    std.finance.pmt(rate, nper, pv, 0, 1) - std.finance.ipmt(rate, 2, nper, pv, 0, 1),
+    1e-12
+  );
+
+  assert.throws(() => std.finance.ipmt(rate, 0, nper, pv), /per must be in \[1, nper\]/);
+  assert.throws(() => std.finance.ipmt(rate, 3, nper, pv), /per must be in \[1, nper\]/);
+  assert.throws(() => std.finance.ipmt(rate, 1, nper, pv, 0, 2), /type must be 0 or 1/);
+  assert.throws(() => std.finance.ipmt(10, 1, 2, 1e308), /Non-finite numeric result/);
+  assert.throws(() => std.finance.ipmt(rate, 1, 0, pv), /nper must be a positive integer/);
+  assert.throws(() => std.finance.ppmt(rate, 1, 0, pv), /nper must be a positive integer/);
+  assert.throws(() => std.finance.ipmt(rate, 1.2, nper, pv), /per must be an integer/);
+  assert.throws(() => std.finance.ipmt(rate, 1, 2.5, pv), /nper must be an integer/);
+  assert.throws(() => std.finance.npv("x", [1]), /rate must be finite/);
+
+  // per > 2 covers the type=1 balance update path
+  const nper3 = 3;
+  const pmt1 = std.finance.pmt(rate, nper3, pv, 0, 1);
+  assert.ok(Number.isFinite(std.finance.ipmt(rate, 3, nper3, pv, 0, 1)));
+  approxEqual(
+    std.finance.ppmt(rate, 3, nper3, pv, 0, 1),
+    pmt1 - std.finance.ipmt(rate, 3, nper3, pv, 0, 1),
+    1e-12
+  );
+});
+
+test("std.finance.npv / irr", () => {
+  const r = 0.1;
+  const cfs = [100, 100, 100];
+  const expected = cfs.reduce((acc, cf, i) => acc + cf / (1 + r) ** (i + 1), 0);
+  approxEqual(std.finance.npv(r, cfs), expected, 1e-12);
+  assert.throws(() => std.finance.npv(1e308, [1, 1]), /npv: invalid discount rate/);
+  assert.throws(() => std.finance.npv(r, [1, Number.NaN]), /npv: expected finite number array/);
+  assert.throws(() => std.finance.npv(r, [1, "x"]), /npv: expected finite number array/);
+  assert.throws(() => std.finance.npv(-0.9999, new Array(100).fill(0)), /npv: invalid discount rate/);
+
+  approxEqual(std.finance.irr([-100, 110]), 0.1, 1e-9);
+  approxEqual(std.finance.irr([-100, 110], 0.2), 0.1, 1e-9);
+  approxEqual(std.finance.irr([-100, 500, -500], 1), (3 - Math.sqrt(5)) / 2, 1e-9);
+  approxEqual(std.finance.irr([-1000, 1600]), 0.6, 1e-12);
+  approxEqual(std.finance.irr([-100, 135]), 0.35, 1e-12);
+  approxEqual(std.finance.irr([-1, 0.0001]), -0.9999, 1e-12);
+  approxEqual(std.finance.irr([100, -135]), 0.35, 1e-12);
+  assert.throws(() => std.finance.irr([100, 110]), /irr: cashflows must include both positive and negative values/);
+  assert.throws(() => std.finance.irr([-100, -110]), /irr: cashflows must include both positive and negative values/);
+  assert.throws(() => std.finance.irr("nope"), /irr: expected cashflows array/);
+  assert.throws(() => std.finance.irr([-1]), /irr: cashflows must have at least 2 values/);
+  assert.throws(() => std.finance.irr([-1, Number.NaN]), /irr: expected finite number array/);
+  assert.throws(() => std.finance.irr([-1, "x"]), /irr: expected finite number array/);
+  assert.throws(() => std.finance.irr([-100, 110], Number.NaN), /rate must be finite/);
+  assert.throws(() => std.finance.irr([-100, 110], -2), /rate must be > -1/);
+  assert.throws(() => std.finance.irr([-1, 1e10]), /irr: could not find a root/);
+  assert.throws(() => std.finance.npv(r, "nope"), /npv: expected cashflows array/);
+
+  const longCashflows = [-1, 1, ...new Array(298).fill(0)];
+  assert.equal(longCashflows.length, 300);
+  approxEqual(std.finance.irr(longCashflows, 10), 0, 1e-12);
+
+  const exactCandidateCashflows = new Array(601).fill(0);
+  exactCandidateCashflows[0] = -1;
+  exactCandidateCashflows[600] = 2 ** -600;
+  assert.equal(std.finance.irr(exactCandidateCashflows), -0.5);
+
+  // Trigger candidate overflow/underflow handling while still finding a root.
+  const far = 199;
+  const farCashflows = [-100, ...new Array(far - 1).fill(0), 1];
+  const farExpected = 0.01 ** (1 / far) - 1;
+  approxEqual(std.finance.irr(farCashflows), farExpected, 1e-9);
+
+  const lateOverflowCashflows = new Array(201).fill(0);
+  lateOverflowCashflows[0] = 1;
+  lateOverflowCashflows[1] = -1e-6;
+  lateOverflowCashflows[200] = 1;
+  assert.throws(() => std.finance.irr(lateOverflowCashflows), /irr: could not find a root/);
 });
 
 test("std.assert.that", () => {
