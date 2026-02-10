@@ -178,9 +178,7 @@ export function parseInputsBlock(block: FencedCodeBlock): {
   const seen = new Set<string>();
   const lines = block.content.split(/\r?\n/);
 
-  for (let i = 0; i < lines.length; i++) {
-    const rawLine = lines[i];
-    if (rawLine === undefined) continue;
+  for (const [i, rawLine] of lines.entries()) {
     const lineNumber = block.fenceLine + 1 + i;
     const line = rawLine.trim();
     if (!line || line.startsWith("#")) continue;

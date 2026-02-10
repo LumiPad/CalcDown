@@ -22,6 +22,7 @@ test("program_patches: parser accepts index/primaryKey selectors and reports sel
       "",
       "// comment",
       "t[0].x = 1;",
+      "t[\"\\uZZZZ\"].x = 1;",
       "t[\"ok\"].x = 1 + ;",
       "t['pk'].x = 2;",
       "t[1].x = 3;",

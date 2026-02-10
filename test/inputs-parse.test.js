@@ -17,6 +17,8 @@ test("inputs parser: handles core types, currency args, and custom types", () =>
       [
         "# comment",
         "name : string = \"Joi\"",
+        "nickname : string = hello",
+        "nickname2 : string = 'hi'",
         "flag : boolean = true # inline comment",
         "n : Number = 1.5",
         "i : integer = -2",
@@ -38,6 +40,8 @@ test("inputs parser: handles core types, currency args, and custom types", () =>
 
   assert.equal(byName.name.type.name, "string");
   assert.equal(byName.name.defaultValue, "Joi");
+  assert.equal(byName.nickname.defaultValue, "hello");
+  assert.equal(byName.nickname2.defaultValue, "hi");
 
   assert.equal(byName.flag.type.name, "boolean");
   assert.equal(byName.flag.defaultValue, true);
@@ -79,12 +83,17 @@ test("inputs parser: reports invalid lines, invalid defaults, and duplicate name
         "bad_int : integer = 1.2",
         "bad_date : date = nope",
         "bad_constraints : number = 1 [min: x]",
+        "empty_constraints : number = 1 []",
+        "bad_constraint_part : number = 1 [nope]",
         "min_gt_max : number = 1 [min: 2, max: 1]",
         "no_minmax : number = 1 [,]",
         "string_constraints : string = \"x\" [min: 0]",
         "int_constraints_nonint : integer = 1 [min: 0.5]",
+        "int_constraints_nonint_max : integer = 1 [max: 0.5]",
         "dup_constraints : number = 1 [min: 0, min: 1]",
         "tight_constraints : number = 1[min: 0]",
+        "bracket_missing_open : number = 1]",
+        "missing_default : number = [min: 0]",
         "x : number = 1",
         "x : number = 2",
         " # comment only",

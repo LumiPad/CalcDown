@@ -40,11 +40,15 @@ test("view_contract_common utilities behave deterministically", () => {
   assert.equal(defaultLabelForKey("risk_level"), "Risk Level");
   assert.equal(defaultLabelForKey("api_url"), "API URL");
   assert.equal(defaultLabelForKey("unchanged"), "unchanged");
+  assert.equal(defaultLabelForKey("   "), "   ");
+  assert.equal(defaultLabelForKey("__"), "__");
+  assert.equal(defaultLabelForKey("hello-world"), "Hello World");
 
   assert.ok(bannedKeys.has("__proto__"));
 
   const normalized = normalizeParsedView({ line: 1, raw: {} });
   assert.equal(normalized.library, "calcdown");
+  assert.equal(normalizeParsedView({ line: 2, raw: {}, library: "x" }).library, "x");
 });
 
 test("view_contract_format validates strings and object formats", () => {
@@ -55,6 +59,7 @@ test("view_contract_format validates strings and object formats", () => {
   assert.equal(validateFormat("percent01", 1, messages), "percent01");
   assert.equal(validateFormat("invalid", 1, messages), null);
   assert.equal(validateFormat(123, 1, messages), null);
+  assert.equal(validateFormat({ kind: "nope" }, 2, messages), null);
 
   const fmt = validateFormat({ kind: "percent", digits: 999, scale: 100 }, 4, messages);
   assert.ok(fmt && typeof fmt === "object");
@@ -432,6 +437,14 @@ test("validateCalcdownParsedView supports visible, cards sparkline/compare, and 
   assert.equal(cards.spec.items[1].compare.key, "mrr_delta");
   assert.deepEqual(cardsMessages, []);
 
+  const emptyVisibleMessages = [];
+  const emptyVisible = validateCalcdownParsedView(
+    { line: 1, id: "c_empty_visible", type: "cards", visible: "", spec: { items: [{ key: "a" }] } },
+    emptyVisibleMessages
+  );
+  assert.ok(emptyVisible);
+  assert.ok(codes(emptyVisibleMessages).includes("CD_VIEW_VISIBLE"));
+
   const badVisibleMessages = [];
   const badVisible = validateCalcdownParsedView(
     { line: 1, id: "c_bad_visible", type: "cards", visible: "x >", spec: { items: [{ key: "a" }] } },
@@ -473,6 +486,14 @@ test("validateCalcdownParsedView supports visible, cards sparkline/compare, and 
   assert.ok(badCompare);
   assert.ok(codes(badCompareMessages).includes("CD_VIEW_SCHEMA_DISALLOWED_KEY"));
 
+  const badKeyMessages = [];
+  const badKey = validateCalcdownParsedView(
+    { line: 1, id: "c_bad_key", type: "cards", spec: { items: [{ key: "__proto__" }, { key: "ok" }] } },
+    badKeyMessages
+  );
+  assert.ok(badKey);
+  assert.ok(codes(badKeyMessages).includes("CD_VIEW_SCHEMA_DISALLOWED_KEY"));
+
   const tableMessages = [];
   const table = validateCalcdownParsedView(
     {
@@ -484,6 +505,9 @@ test("validateCalcdownParsedView supports visible, cards sparkline/compare, and 
       spec: {
         columns: [
           { key: "revenue", dataBar: { color: "#3b82f6", max: "auto" } },
+          { key: "bad_color", dataBar: { color: "" } },
+          { key: "good_num", dataBar: { max: 10 } },
+          { key: "bad_type", dataBar: { max: null } },
           { key: "bad", dataBar: true },
           { key: "bad2", dataBar: { max: 0 } },
           { key: "bad3", dataBar: { max: "nope" } },
@@ -495,6 +519,7 @@ test("validateCalcdownParsedView supports visible, cards sparkline/compare, and 
   assert.ok(table);
   assert.equal(table.visible, false);
   assert.equal(table.spec.columns[0].dataBar.max, "auto");
+  assert.equal(table.spec.columns[2].dataBar.max, 10);
 
   const tableCodes = new Set(codes(tableMessages));
   assert.ok(tableCodes.has("CD_VIEW_TABLE_DATABAR"));

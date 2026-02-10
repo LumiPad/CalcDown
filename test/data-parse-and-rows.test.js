@@ -84,6 +84,9 @@ test("data_types: parseType + scalar coercion + identifier checks", () => {
 test("data_header: parses known keys and reports invalid/unknown lines", () => {
   const b = block("", 30);
   const res = parseDataHeaderLines(b, [
+    undefined,
+    "",
+    "# header comment",
     "name: revenue",
     "primaryKey: id",
     "sortBy: bad-key",
@@ -92,8 +95,11 @@ test("data_header: parses known keys and reports invalid/unknown lines", () => {
     "hash: sha256:abc",
     "unknown: value",
     "columns:",
+    undefined,
+    "  # columns comment",
     "  id: string",
     "  amount: currency[isk]",
+    "\tflag: boolean",
     "  bad entry",
     "another: key",
     "not a mapping line",
@@ -195,6 +201,26 @@ test("data_parse: validates block structure and external table constraints", () 
   const missingSep = parseDataBlock(block("name: t\nprimaryKey: id\ncolumns:\n  id: string", 5));
   assert.equal(missingSep.table, null);
   assert.ok(codes(missingSep.messages).includes("CD_DATA_MISSING_SEPARATOR"));
+
+  const missingName = parseDataBlock(block("primaryKey: id\ncolumns:\n  id: string\n---\n{\"id\":\"a\"}", 10));
+  assert.equal(missingName.table, null);
+  assert.ok(codes(missingName.messages).includes("CD_DATA_HEADER_MISSING_NAME"));
+
+  const invalidName = parseDataBlock(block("name: 123bad\nprimaryKey: id\ncolumns:\n  id: string\n---\n{\"id\":\"a\"}", 11));
+  assert.equal(invalidName.table, null);
+  assert.ok(codes(invalidName.messages).includes("CD_DATA_INVALID_NAME"));
+
+  const missingPrimaryKey = parseDataBlock(block("name: t\ncolumns:\n  id: string\n---\n{\"id\":\"a\"}", 12));
+  assert.equal(missingPrimaryKey.table, null);
+  assert.ok(codes(missingPrimaryKey.messages).includes("CD_DATA_HEADER_MISSING_PRIMARY_KEY"));
+
+  const missingColumns = parseDataBlock(block("name: t\nprimaryKey: id\n---\n{\"id\":\"a\"}", 13));
+  assert.equal(missingColumns.table, null);
+  assert.ok(codes(missingColumns.messages).includes("CD_DATA_HEADER_MISSING_COLUMNS"));
+
+  const pkNotDeclared = parseDataBlock(block("name: t\nprimaryKey: id\ncolumns:\n  other: string\n---\n{\"other\":\"a\"}", 14));
+  assert.ok(pkNotDeclared.table);
+  assert.ok(codes(pkNotDeclared.messages).includes("CD_DATA_PRIMARYKEY_NOT_DECLARED"));
 
   const badMeta = parseDataBlock(
     block("name: std\nprimaryKey: id\nsortBy: bad-key\ncolumns:\n  id: string\n---\n{\"id\":\"a\"}", 20)

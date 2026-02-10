@@ -176,3 +176,30 @@ test("markdown renderer: allows relative hrefs and rejects dangerous schemes", (
     assert.ok(codeTexts.some((v) => v.startsWith("java script:alert(")));
     assert.ok(codeTexts.includes("data:text/plain,abc"));
   }));
+
+test("markdown renderer: handles edge-case escapes and unclosed inline markers", () =>
+  withFakeDom(() => {
+    const root = document.createElement("div");
+    renderMarkdownText(
+      root,
+      [
+        "\\<!--not a comment-->",
+        "\\\\<!-- stripped -->",
+        "--",
+        "Text with trailing backslash " + "\\",
+        "Unclosed `code",
+        "**bold",
+        "*em",
+        "[empty]()",
+        "[broken](https://example.com",
+      ].join("\n")
+    );
+
+    const text = root.textContent;
+    assert.match(text, /<!--not a comment-->/);
+    assert.doesNotMatch(text, /stripped/);
+    assert.doesNotMatch(text, /\\$/);
+
+    const links = nodesByTag(root, "a");
+    assert.equal(links.length, 0);
+  }));

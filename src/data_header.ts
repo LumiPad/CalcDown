@@ -30,7 +30,8 @@ export function parseDataHeaderLines(
   const columns: Record<string, InputType> = Object.create(null);
 
   for (let i = 0; i < headerLines.length; i++) {
-    const raw = headerLines[i] ?? "";
+    const raw = headerLines[i];
+    if (raw === undefined) continue;
     const trimmed = raw.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
 
@@ -46,8 +47,8 @@ export function parseDataHeaderLines(
       continue;
     }
 
-    const key = m[1] ?? "";
-    const value = m[2] ?? "";
+    const key = m[1]!;
+    const value = m[2]!;
 
     if (key === "name") {
       name = value.trim() || null;
@@ -75,7 +76,8 @@ export function parseDataHeaderLines(
     }
     if (key === "columns") {
       for (i = i + 1; i < headerLines.length; i++) {
-        const rawCol = headerLines[i] ?? "";
+        const rawCol = headerLines[i];
+        if (rawCol === undefined) continue;
         const trimmedCol = rawCol.trim();
         if (!trimmedCol || trimmedCol.startsWith("#")) continue;
         if (!rawCol.startsWith(" ") && !rawCol.startsWith("\t")) {
@@ -93,8 +95,8 @@ export function parseDataHeaderLines(
           });
           continue;
         }
-        const colName = cm[1] ?? "";
-        const typeRaw = cm[2] ?? "";
+        const colName = cm[1]!;
+        const typeRaw = cm[2]!;
         columns[colName] = parseType(typeRaw);
       }
       continue;

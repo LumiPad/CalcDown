@@ -31,8 +31,13 @@ test("infer types: covers numeric/currency/percent propagation and table inferen
     "const not_flag = !flag;",
     "const str_cat = s & n;",
     "const member_from_obj = ({x:1}).x;",
+    "const spread_member = ({ ...{ a: 1 }, b: 2 }).b;",
     "const lit_str = \"x\";",
     "const lit_bool = true;",
+    "const nullish_pct = pct ?? pct;",
+    "const let_num = let { t = n + 1 } in t;",
+    "const first_qty = sales.qty[0];",
+    "const first_row_qty = sales[0].qty;",
     "const table_col = std.table.col(sales, \"qty\");",
     "const table_col_not_table = std.table.col(n, \"qty\");",
     "const table_col_non_string_key = std.table.col(sales, n);",
@@ -44,6 +49,7 @@ test("infer types: covers numeric/currency/percent propagation and table inferen
     "const table_sum_missing = std.table.sum(sales, \"missing\");",
     "const map_scalar = std.table.map(sales, (row, idx) => idx);",
     "const map_no_params = std.table.map(sales, () => 1);",
+    "const map_destruct_table = std.table.map(sales, ({ id, rev }) => ({ id: id, rev: rev }));",
     "const map_table = std.table.map(sales, (row) => ({ id: row.id, rev: row.rev }));",
     "const map_table_bad_obj = std.table.map(sales, (row) => ({ id: row.id, nested: { x: 1 } }));",
     "const map_unknown = std.table.map(sales, (row) => row.missing);",
@@ -122,8 +128,13 @@ test("infer types: covers numeric/currency/percent propagation and table inferen
   assert.equal(vt.not_flag.name, "boolean");
   assert.equal(vt.str_cat.name, "string");
   assert.equal(vt.member_from_obj.name, "number");
+  assert.equal(vt.spread_member.name, "number");
   assert.equal(vt.lit_str.name, "string");
   assert.equal(vt.lit_bool.name, "boolean");
+  assert.equal(vt.nullish_pct.name, "percent");
+  assert.equal(vt.let_num.name, "number");
+  assert.equal(vt.first_qty.name, "integer");
+  assert.equal(vt.first_row_qty.name, "integer");
 
   assert.equal(vt.table_sum_cur.name, "currency");
   assert.deepEqual(vt.table_sum_cur.args, ["USD"]);
@@ -162,6 +173,7 @@ test("infer types: covers numeric/currency/percent propagation and table inferen
   assert.equal(Object.prototype.hasOwnProperty.call(vt, "unknown_ref"), false);
 
   const ct = inferred.computedTables;
+  assert.ok(ct.map_destruct_table);
   assert.ok(ct.map_table);
   assert.equal(ct.map_table.primaryKey, "id");
   assert.equal(ct.map_table.columns.id.name, "string");

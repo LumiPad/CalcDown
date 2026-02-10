@@ -213,3 +213,36 @@ test("editor patcher: updateTableCell validates selectors, row JSON, schema, and
   assert.match(next, /"id":"a","qty":1,"amount":20,"note":"x"/);
   assert.match(next, /"id":"b","qty":2,"amount":20,"when":"2025-03-04","at":"2025-03-04T12:13:14.000Z"/);
 });
+
+test("editor patcher: updateTableCell covers string/boolean/custom branches and unknown ops", () => {
+  const map = buildSourceMap({
+    inputs: [],
+    tables: [
+      {
+        name: "items",
+        primaryKey: "id",
+        columns: {
+          id: type("string"),
+          qty: type("integer"),
+          flag: type("boolean"),
+          note: type("string"),
+          meta: type("custom"),
+        },
+        rows: [{ id: "a", qty: 1, flag: false, note: "x", meta: { k: 1 } }],
+        rowMap: [{ primaryKey: "a", line: 1 }],
+        line: 1,
+      },
+    ],
+  });
+
+  const source = '{"id":"a","qty":1,"flag":false,"note":"x","meta":{"k":1}}\n';
+  let next = applyPatch(source, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "note", value: 123 }, map);
+  next = applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "flag", value: "1" }, map);
+  next = applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "meta", value: { a: 1 } }, map);
+
+  assert.match(next, /"note":"123"/);
+  assert.match(next, /"flag":true/);
+  assert.match(next, /"meta":\{"a":1\}/);
+
+  assert.equal(applyPatch(next, { kind: "noop" }, map), next);
+});

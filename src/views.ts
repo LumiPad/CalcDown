@@ -33,15 +33,6 @@ function sanitizeValue(raw: unknown, line: number, st: { seen: WeakSet<object>; 
   }
   if (!raw || typeof raw !== "object") return raw;
 
-  // Preserve Dates as-is (js-yaml JSON_SCHEMA shouldn't produce them, but be defensive).
-  if (raw instanceof Date) {
-    if (st.seen.has(raw)) throw new Error("YAML anchors/aliases are not allowed in view blocks");
-    st.seen.add(raw);
-    st.nodes++;
-    if (st.nodes > MAX_VIEW_NODES) throw new Error(`View is too large (max nodes ${MAX_VIEW_NODES})`);
-    return raw;
-  }
-
   const obj = raw as Record<string, unknown>;
   if (st.seen.has(obj)) throw new Error("YAML anchors/aliases are not allowed in view blocks");
   st.seen.add(obj);
