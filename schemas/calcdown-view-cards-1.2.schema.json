@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "calcdown-view-cards-1.2.schema.json",
+  "title": "CalcDown 1.2 Cards View",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "spec"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "type": { "const": "cards" },
+    "library": { "type": "string", "const": "calcdown", "default": "calcdown" },
+    "visible": { "oneOf": [{ "type": "boolean" }, { "type": "string", "minLength": 1 }] },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "title": { "type": "string" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key"],
+                "properties": {
+                  "key": { "type": "string", "minLength": 1 },
+                  "label": { "type": "string" },
+                  "format": {
+                    "oneOf": [
+                      { "enum": ["number", "integer", "percent", "percent01", "currency", "date"] },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["kind"],
+                        "properties": {
+                          "kind": { "enum": ["number", "integer", "percent", "currency", "date"] },
+                          "digits": { "type": "integer", "minimum": 0, "maximum": 12 },
+                          "scale": { "type": "number", "exclusiveMinimum": 0 },
+                          "currency": { "type": "string", "minLength": 1 }
+                        }
+                      }
+                    ]
+                  },
+                  "compare": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["key"],
+                    "properties": {
+                      "key": { "type": "string", "minLength": 1 },
+                      "label": { "type": "string" },
+                      "format": {
+                        "oneOf": [
+                          { "enum": ["number", "integer", "percent", "percent01", "currency", "date"] },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": ["kind"],
+                            "properties": {
+                              "kind": { "enum": ["number", "integer", "percent", "currency", "date"] },
+                              "digits": { "type": "integer", "minimum": 0, "maximum": 12 },
+                              "scale": { "type": "number", "exclusiveMinimum": 0 },
+                              "currency": { "type": "string", "minLength": 1 }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "source", "key"],
+                "properties": {
+                  "type": { "const": "sparkline" },
+                  "source": { "type": "string", "minLength": 1 },
+                  "key": { "type": "string", "minLength": 1 },
+                  "label": { "type": "string" },
+                  "kind": { "enum": ["line"], "default": "line" }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

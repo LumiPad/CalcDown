@@ -24,6 +24,8 @@ function tokenToString(tok: Token): string {
       return `'${tok.value}'`;
     case "op":
       return `'${tok.value}'`;
+    case "spread":
+      return "'...'";
     case "arrow":
       return "'=>'";
     case "identifier":
@@ -65,7 +67,7 @@ function parseArrow(t: Tokenizer): Expr {
 }
 
 function parseConditional(t: Tokenizer): Expr {
-  const test = parseLogicalOr(t);
+  const test = parseNullishCoalesce(t);
   const tok = t.peek();
   if (tok.type === "punct" && tok.value === "?") {
     t.next();
@@ -78,6 +80,20 @@ function parseConditional(t: Tokenizer): Expr {
     return { kind: "conditional", test, consequent, alternate };
   }
   return test;
+}
+
+function parseNullishCoalesce(t: Tokenizer): Expr {
+  let left = parseLogicalOr(t);
+  while (true) {
+    const tok = t.peek();
+    if (tok.type === "op" && tok.value === "??") {
+      t.next();
+      const right = parseLogicalOr(t);
+      left = { kind: "binary", op: "??", left, right };
+      continue;
+    }
+    return left;
+  }
 }
 
 function parseLogicalOr(t: Tokenizer): Expr {
@@ -355,31 +371,95 @@ function parsePrimary(t: Tokenizer): Expr {
   if (tok.type === "number") return { kind: "number", value: tok.value };
   if (tok.type === "string") return { kind: "string", value: tok.value };
   if (tok.type === "boolean") return { kind: "boolean", value: tok.value };
-  if (tok.type === "identifier") return { kind: "identifier", name: tok.value };
+
+  if (tok.type === "identifier") {
+    if (tok.value === "let") {
+      const next = t.peek();
+      if (next.type === "punct" && next.value === "{") {
+        t.next();
+        const bindings: { name: string; expr: Expr }[] = [];
+
+        while (true) {
+          const nameTok = t.next();
+          if (nameTok.type !== "identifier") {
+            throw new CalcScriptSyntaxError("Expected identifier in let binding", nameTok.pos);
+          }
+
+          const eq = t.next();
+          if (!(eq.type === "punct" && eq.value === "=")) {
+            throw new CalcScriptSyntaxError("Expected '=' in let binding", eq.pos);
+          }
+
+          const expr = parseArrow(t);
+          bindings.push({ name: nameTok.value, expr });
+
+          const sep = t.peek();
+          if (sep.type === "punct" && sep.value === ";") {
+            t.next();
+            const maybeClose = t.peek();
+            if (maybeClose.type === "punct" && maybeClose.value === "}") {
+              t.next();
+              break;
+            }
+            continue;
+          }
+          if (sep.type === "punct" && sep.value === "}") {
+            t.next();
+            break;
+          }
+
+          throw new CalcScriptSyntaxError("Expected ';' or '}' after let binding", sep.pos);
+        }
+
+        const inTok = t.next();
+        if (!(inTok.type === "identifier" && inTok.value === "in")) {
+          throw new CalcScriptSyntaxError("Expected 'in' after let bindings", inTok.pos);
+        }
+
+        const body = parseArrow(t);
+        return { kind: "let", bindings, body };
+      }
+    }
+
+    return { kind: "identifier", name: tok.value };
+  }
+
   if (tok.type === "punct" && tok.value === "{") {
-    const properties: { key: string; value: Expr; shorthand: boolean }[] = [];
+    const entries: Array<
+      | { kind: "property"; key: string; value: Expr; shorthand: boolean }
+      | { kind: "spread"; expr: Expr }
+    > = [];
+
     const next = t.peek();
     if (next.type === "punct" && next.value === "}") {
       t.next();
-      return { kind: "object", properties };
+      return { kind: "object", entries };
     }
-    while (true) {
-      const keyTok = t.next();
-      let key: string;
-      if (keyTok.type === "identifier") key = keyTok.value;
-      else if (keyTok.type === "string") key = keyTok.value;
-      else throw new CalcScriptSyntaxError("Expected object property key", keyTok.pos);
 
-      const afterKey = t.peek();
-      if (afterKey.type === "punct" && afterKey.value === ":") {
+    while (true) {
+      const peek = t.peek();
+      if (peek.type === "spread") {
         t.next();
-        const value = parseArrow(t);
-        properties.push({ key, value, shorthand: false });
+        const expr = parseArrow(t);
+        entries.push({ kind: "spread", expr });
       } else {
-        if (keyTok.type !== "identifier") {
-          throw new CalcScriptSyntaxError("String keys require ':' value", keyTok.pos);
+        const keyTok = t.next();
+        let key: string;
+        if (keyTok.type === "identifier") key = keyTok.value;
+        else if (keyTok.type === "string") key = keyTok.value;
+        else throw new CalcScriptSyntaxError("Expected object property key", keyTok.pos);
+
+        const afterKey = t.peek();
+        if (afterKey.type === "punct" && afterKey.value === ":") {
+          t.next();
+          const value = parseArrow(t);
+          entries.push({ kind: "property", key, value, shorthand: false });
+        } else {
+          if (keyTok.type !== "identifier") {
+            throw new CalcScriptSyntaxError("String keys require ':' value", keyTok.pos);
+          }
+          entries.push({ kind: "property", key, value: { kind: "identifier", name: key }, shorthand: true });
         }
-        properties.push({ key, value: { kind: "identifier", name: key }, shorthand: true });
       }
 
       const sep = t.peek();
@@ -398,8 +478,10 @@ function parsePrimary(t: Tokenizer): Expr {
       }
       throw new CalcScriptSyntaxError("Expected ',' or '}' in object literal", sep.pos);
     }
-    return { kind: "object", properties };
+
+    return { kind: "object", entries };
   }
+
   if (tok.type === "punct" && tok.value === "(") {
     const expr = parseArrow(t);
     const close = t.next();
@@ -408,6 +490,7 @@ function parsePrimary(t: Tokenizer): Expr {
     }
     return expr;
   }
+
   if (tok.type === "eof") throw new CalcScriptSyntaxError("Unexpected end of expression", tok.pos);
   throw new CalcScriptSyntaxError(`Unexpected token: ${tokenToString(tok)}`, tok.pos);
 }

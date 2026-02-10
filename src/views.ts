@@ -13,6 +13,7 @@ export interface ParsedView {
   type?: string;
   library?: string;
   source?: string;
+  visible?: unknown;
   spec?: unknown;
 }
 
@@ -65,6 +66,7 @@ function parseViewObject(raw: unknown, line: number): ParsedView | null {
     ...(typeof obj.type === "string" ? { type: obj.type } : {}),
     ...(typeof obj.library === "string" ? { library: obj.library } : {}),
     ...(typeof obj.source === "string" ? { source: obj.source } : {}),
+    ...("visible" in obj ? { visible: obj.visible } : {}),
     ...("spec" in obj ? { spec: obj.spec } : {}),
   };
 }

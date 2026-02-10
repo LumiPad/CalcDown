@@ -8,12 +8,13 @@ export type Token =
   | { type: "string"; value: string; pos: number }
   | { type: "boolean"; value: boolean; pos: number }
   | { type: "identifier"; value: string; pos: number }
+  | { type: "spread"; pos: number }
   | {
       type: "op";
-      value: "+" | "-" | "*" | "/" | "**" | "&" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "!";
+      value: "+" | "-" | "*" | "/" | "**" | "&" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "??" | "!";
       pos: number;
     }
-  | { type: "punct"; value: "(" | ")" | "." | "," | "{" | "}" | "[" | "]" | ":" | "?"; pos: number }
+  | { type: "punct"; value: "(" | ")" | "." | "," | "{" | "}" | "[" | "]" | ":" | "?" | ";" | "="; pos: number }
   | { type: "arrow"; pos: number }
   | { type: "eof"; pos: number };
 
@@ -72,29 +73,23 @@ export class Tokenizer {
     const ch = this.src[this.i];
     if (ch === undefined) return { type: "eof", pos };
 
-    if (
-      ch === "(" ||
-      ch === ")" ||
-      ch === "." ||
-      ch === "," ||
-      ch === "{" ||
-      ch === "}" ||
-      ch === "[" ||
-      ch === "]" ||
-      ch === ":" ||
-      ch === "?"
-    ) {
-      this.i++;
-      return { type: "punct", value: ch, pos };
+    const two = this.src.slice(this.i, this.i + 2);
+    const three = this.src.slice(this.i, this.i + 3);
+
+    if (three === "...") {
+      this.i += 3;
+      return { type: "spread", pos };
     }
 
-    if (ch === "=" && this.src[this.i + 1] === ">") {
+    if (two === "=>") {
       this.i += 2;
       return { type: "arrow", pos };
     }
 
-    const two = this.src.slice(this.i, this.i + 2);
-    const three = this.src.slice(this.i, this.i + 3);
+    if (two === "??") {
+      this.i += 2;
+      return { type: "op", value: "??", pos };
+    }
 
     if (three === "===") {
       this.i += 3;
@@ -128,6 +123,24 @@ export class Tokenizer {
     if (two === "<=") {
       this.i += 2;
       return { type: "op", value: "<=", pos };
+    }
+
+    if (
+      ch === "(" ||
+      ch === ")" ||
+      ch === "." ||
+      ch === "," ||
+      ch === "{" ||
+      ch === "}" ||
+      ch === "[" ||
+      ch === "]" ||
+      ch === ":" ||
+      ch === "?" ||
+      ch === ";" ||
+      ch === "="
+    ) {
+      this.i++;
+      return { type: "punct", value: ch, pos };
     }
 
     if (ch === "+" || ch === "-" || ch === "/" || ch === "*" || ch === "&" || ch === "<" || ch === ">" || ch === "!") {

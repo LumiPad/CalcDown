@@ -9,7 +9,7 @@ This repo provides a small, dependency-light “web integration” layer in `src
 ```ts
 import { runCalcdown } from "../dist/web/index.js";
 
-const markdown = `---\ncalcdown: 1.1\n---\n\n\`\`\`calc\nconst x = 1 + 2;\n\`\`\``;
+const markdown = `---\ncalcdown: 1.2\n---\n\n\`\`\`calc\nconst x = 1 + 2;\n\`\`\``;
 const res = runCalcdown(markdown);
 
 console.log(res.values.x); // 3

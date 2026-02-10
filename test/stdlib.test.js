@@ -838,3 +838,183 @@ test("std.assert.that", () => {
   assert.throws(() => std.assert.that(false), /Assertion failed/);
   assert.throws(() => std.assert.that(false, "nope"), /nope/);
 });
+
+test("std.logic.cond / coalesce / isPresent / where", () => {
+  assert.equal(std.logic.cond(true, 1, 0), 1);
+  assert.equal(std.logic.cond(false, 1, true, 2, 0), 2);
+  assert.equal(std.logic.cond(false, 1, false, 2, "d"), "d");
+  assert.throws(() => std.logic.cond(), /cond: expected arguments/);
+  assert.throws(() => std.logic.cond(true, 1), /cond: expected condition\/value pairs plus a default value/);
+  assert.throws(() => std.logic.cond("nope", 1, 0), /cond: conditions must be boolean/);
+
+  assert.equal(std.logic.coalesce(null, undefined, 1, 2), 1);
+  assert.equal(std.logic.coalesce(undefined, null), null);
+  assert.deepEqual(std.logic.coalesce([null, 2], [1, null]), [1, 2]);
+  assert.deepEqual(std.logic.coalesce([null, 2], 5), [5, 2]);
+  assert.deepEqual(std.logic.coalesce(5, [null, 2]), [5, 5]);
+  assert.throws(() => std.logic.coalesce(), /coalesce: expected at least 1 value/);
+  assert.throws(() => std.logic.coalesce([1], [1, 2]), /coalesce: array length mismatch/);
+
+  assert.equal(std.logic.isPresent(null), false);
+  assert.equal(std.logic.isPresent(0), true);
+  assert.deepEqual(std.logic.isPresent([null, 1, undefined]), [false, true, false]);
+
+  assert.equal(std.logic.where(true, 1, 2), 1);
+  assert.deepEqual(std.logic.where([true, false], [1, 2], 9), [1, 9]);
+  assert.throws(() => std.logic.where(1, 1, 2), /where: test must be boolean/);
+  assert.throws(() => std.logic.where([true, "x"], 1, 2), /where: test must be boolean/);
+  assert.throws(() => std.logic.where([true], [1, 2], 3), /where: array length mismatch/);
+});
+
+test("std.array utilities", () => {
+  assert.deepEqual(std.array.take([1, 2, 3], 2), [1, 2]);
+  assert.deepEqual(std.array.take([1], 5), [1]);
+  assert.throws(() => std.array.take("nope", 1), /take: expected array/);
+  assert.throws(() => std.array.take([1], -1), /take: n must be a non-negative integer/);
+
+  assert.deepEqual(std.array.drop([1, 2, 3], 2), [3]);
+  assert.deepEqual(std.array.drop([1], 5), []);
+  assert.throws(() => std.array.drop([1], 1.5), /drop: n must be a non-negative integer/);
+
+  assert.deepEqual(std.array.concat([1], [2, 3]), [1, 2, 3]);
+  assert.throws(() => std.array.concat([1], "x"), /concat: expected array/);
+
+  assert.deepEqual(std.array.zip([1, 2], ["a", "b"]), [
+    [1, "a"],
+    [2, "b"],
+  ]);
+  assert.throws(() => std.array.zip([1], [1, 2]), /zip: array length mismatch/);
+
+  assert.deepEqual(std.array.flatten([1, [2, 3], 4]), [1, 2, 3, 4]);
+  assert.throws(() => std.array.flatten("nope"), /flatten: expected array/);
+
+  assert.equal(std.array.at([10, 20, 30], 0), 10);
+  assert.equal(std.array.at([10, 20, 30], -1), 30);
+  assert.equal(std.array.at([10, 20, 30], 99), null);
+  assert.throws(() => std.array.at([1], 1.5), /at: index must be an integer/);
+
+  const d0 = new Date(Date.UTC(2024, 0, 1));
+  const d1 = new Date(Date.UTC(2024, 0, 2));
+  assert.equal(std.array.indexOf([1, 2, 3], 2), 1);
+  assert.equal(std.array.indexOf(["a", "b"], "b"), 1);
+  assert.equal(std.array.indexOf([true, false], false), 1);
+  assert.equal(std.array.indexOf([null, 1], null), 0);
+  assert.equal(std.array.indexOf([undefined, 1], undefined), 0);
+  assert.equal(std.array.indexOf([d0, d1], new Date(Date.UTC(2024, 0, 2))), 1);
+  assert.equal(std.array.indexOf([1, 2, 3], 4), -1);
+  assert.throws(() => std.array.indexOf([1], { x: 1 }), /indexOf: expected comparable scalars/);
+  assert.throws(() => std.array.indexOf([{}], 1), /indexOf: expected comparable scalars/);
+
+  assert.equal(std.array.find([1, 2, 3], (x) => x > 1), 2);
+  assert.equal(std.array.find([1, 2, 3], (x) => x > 9), null);
+  assert.throws(() => std.array.find([1], 123), /find: expected predicate function/);
+  assert.throws(() => std.array.find([1], () => 1), /find: predicate must return boolean/);
+
+  assert.equal(std.array.some([1, 2, 3], (x) => x === 2), true);
+  assert.equal(std.array.some([1, 2, 3], (x) => x === 9), false);
+  assert.equal(std.array.every([1, 2, 3], (x) => x > 0), true);
+  assert.equal(std.array.every([1, 2, 3], (x) => x > 2), false);
+  assert.throws(() => std.array.some([1], "nope"), /some: expected predicate function/);
+  assert.throws(() => std.array.every([1], () => "nope"), /every: predicate must return boolean/);
+
+  assert.deepEqual(std.array.distinct([1, 1, 2, 1, 3]), [1, 2, 3]);
+  assert.deepEqual(std.array.distinct([d0, d0, d1]), [d0, d1]);
+  assert.throws(() => std.array.distinct([{}]), /distinct: expected comparable scalars/);
+
+  assert.equal(std.array.product([2, 3, 4]), 24);
+  assert.throws(() => std.array.product([]), /product: empty array/);
+  assert.throws(() => std.array.product([1, Number.NaN]), /product: expected finite number array/);
+  assert.throws(() => std.array.product([1e308, 1e308]), /Non-finite numeric result/);
+
+  const rows = [
+    { cat: "a" },
+    { cat: "a" },
+    { cat: "b" },
+  ];
+  assert.deepEqual(Object.assign({}, std.array.countBy(rows, "cat")), { a: 2, b: 1 });
+  assert.throws(() => std.array.countBy(rows, ""), /countBy: expected key string/);
+  assert.throws(() => std.array.countBy([1, 2], "x"), /countBy: expected row objects/);
+  assert.throws(() => std.array.countBy([{ x: 1 }], "cat"), /countBy: missing key: cat/);
+  assert.throws(() => std.array.countBy([{ cat: {} }], "cat"), /countBy: key values must be string or finite number/);
+  assert.throws(() => std.array.countBy([{ cat: "__proto__" }], "cat"), /disallowed key/);
+});
+
+test("std.stats helpers", () => {
+  assert.equal(std.stats.median([3, 1, 2]), 2);
+  assert.equal(std.stats.median([1, 2, 3, 4]), 2.5);
+  assert.throws(() => std.stats.median([]), /median: expected at least 1 values/);
+
+  assert.equal(std.stats.variance([1, 2, 3]), 1);
+  assert.equal(std.stats.stdev([1, 2, 3]), 1);
+  assert.throws(() => std.stats.variance([1]), /variance: expected at least 2 values/);
+
+  assert.equal(std.stats.percentile([10], 50), 10);
+  assert.equal(std.stats.percentile([0, 10], 0), 0);
+  assert.equal(std.stats.percentile([0, 10], 100), 10);
+  assert.equal(std.stats.percentile([0, 10], 50), 5);
+  assert.throws(() => std.stats.percentile([1, 2, 3], -1), /percentile: p must be a finite number in \[0, 100\]/);
+
+  assert.deepEqual(std.stats.quartiles([0, 10, 20, 30]), [7.5, 15, 22.5]);
+
+  assert.equal(std.stats.covariance([1, 2, 3], [1, 2, 3]), 1);
+  assert.equal(std.stats.correlation([1, 2, 3], [1, 2, 3]), 1);
+  assert.throws(() => std.stats.correlation([1, 1, 1], [1, 2, 3]), /correlation: undefined/);
+
+  const fit = std.stats.linearFit([0, 1, 2], [0, 2, 4]);
+  assert.equal(Object.getPrototypeOf(fit), null);
+  approxEqual(fit.slope, 2, 1e-12);
+  approxEqual(fit.intercept, 0, 1e-12);
+  approxEqual(fit.r2, 1, 1e-12);
+  approxEqual(std.stats.predict(fit, 3), 6, 1e-12);
+
+  const flat = std.stats.linearFit([0, 1, 2], [5, 5, 5]);
+  approxEqual(flat.slope, 0, 1e-12);
+  approxEqual(flat.intercept, 5, 1e-12);
+  assert.equal(flat.r2, 1);
+
+  assert.throws(() => std.stats.linearFit([1, 1], [1, 2]), /linearFit: xs has zero variance/);
+  assert.throws(() => std.stats.predict(null, 1), /predict: expected fit object/);
+  assert.throws(() => std.stats.predict({ slope: 1, intercept: Number.NaN }, 1), /predict: intercept must be finite/);
+});
+
+test("std.date extensions", () => {
+  const d = new Date(Date.UTC(2024, 0, 2)); // Tue
+  assert.equal(std.date.year(d), 2024);
+  assert.equal(std.date.month(d), 1);
+  assert.equal(std.date.day(d), 2);
+  assert.equal(std.date.quarter(d), 1);
+  assert.equal(std.date.weekday(d), 2);
+  assert.throws(() => std.date.weekday(new Date(Number.NaN)), /weekday: invalid date/);
+
+  assert.equal(iso(std.date.addDays(d, 5)), "2024-01-07");
+  assert.throws(() => std.date.addDays(d, 1.5), /addDays: days must be integer/);
+
+  assert.equal(iso(std.date.addYears(new Date(Date.UTC(2024, 1, 29)), 1)), "2025-02-28");
+  assert.throws(() => std.date.addYears(d, Number.POSITIVE_INFINITY), /addYears: years must be integer/);
+
+  assert.equal(std.date.diffDays(new Date(Date.UTC(2024, 0, 1, 12)), new Date(Date.UTC(2024, 0, 3, 3))), 2);
+  assert.equal(std.date.diffMonths(new Date(Date.UTC(2024, 0, 31)), new Date(Date.UTC(2024, 2, 1))), 2);
+
+  assert.equal(iso(std.date.startOfMonth(new Date(Date.UTC(2024, 6, 15)))), "2024-07-01");
+  assert.equal(iso(std.date.endOfMonth(new Date(Date.UTC(2024, 1, 10)))), "2024-02-29");
+  assert.equal(iso(std.date.startOfQuarter(new Date(Date.UTC(2024, 4, 10)))), "2024-04-01");
+
+  assert.deepEqual(std.date.monthRange(new Date(Date.UTC(2024, 0, 2)), new Date(Date.UTC(2024, 2, 15))).map(iso), [
+    "2024-01-01",
+    "2024-02-01",
+    "2024-03-01",
+  ]);
+  assert.throws(
+    () => std.date.monthRange(new Date(Date.UTC(2024, 2, 1)), new Date(Date.UTC(2024, 0, 1))),
+    /monthRange: end must be on or after start/
+  );
+
+  assert.deepEqual(std.date.workdays(new Date(Date.UTC(2024, 0, 5)), new Date(Date.UTC(2024, 0, 8))).map(iso), [
+    "2024-01-05",
+    "2024-01-08",
+  ]);
+  assert.throws(
+    () => std.date.workdays(new Date(Date.UTC(2024, 0, 10)), new Date(Date.UTC(2024, 0, 1))),
+    /workdays: end must be on or after start/
+  );
+});

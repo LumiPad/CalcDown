@@ -1,6 +1,6 @@
 ---
 title: How to Tackle Inflation in Iceland
-calcdown: 1.1
+calcdown: 1.2
 ---
 
 # How to Tackle Inflation in Iceland

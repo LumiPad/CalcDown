@@ -99,7 +99,7 @@ test("export omits view line numbers and includes values", async () => {
 
   await fs.writeFile(
     entry,
-    `---\ncalcdown: 1.1\n---\n\n\`\`\`inputs\na : integer = 2\nb : integer = 3\n\`\`\`\n\n\`\`\`calc\nconst sum = a + b;\n\`\`\`\n\n\`\`\`view\n{\n  \"id\": \"summary\",\n  \"type\": \"cards\",\n  \"library\": \"calcdown\",\n  \"spec\": { \"items\": [ { \"key\": \"sum\" } ] }\n}\n\`\`\`\n`,
+    `---\ncalcdown: 1.2\n---\n\n\`\`\`inputs\na : integer = 2\nb : integer = 3\n\`\`\`\n\n\`\`\`calc\nconst sum = a + b;\n\`\`\`\n\n\`\`\`view\n{\n  \"id\": \"summary\",\n  \"type\": \"cards\",\n  \"library\": \"calcdown\",\n  \"spec\": { \"items\": [ { \"key\": \"sum\" } ] }\n}\n\`\`\`\n`,
     "utf8"
   );
 
@@ -107,7 +107,7 @@ test("export omits view line numbers and includes values", async () => {
   assert.equal(res.status, 0, res.stderr || res.stdout || "export exited non-zero");
 
   const out = JSON.parse(res.stdout);
-  assert.equal(out.calcdown, "1.1");
+  assert.equal(out.calcdown, "1.2");
   assert.equal(out.values.inputs.a, 2);
   assert.equal(out.values.nodes.sum, 5);
   assert.equal(Array.isArray(out.views), true);
@@ -123,7 +123,7 @@ test("diff includes tableRows by primaryKey", async () => {
   const a = path.join(dir, "a.calc.md");
   const b = path.join(dir, "b.calc.md");
 
-  const base = `---\ncalcdown: 1.1\n---\n\n\`\`\`data\nname: items\nprimaryKey: id\ncolumns:\n  id: string\n  qty: integer\n---\n`;
+  const base = `---\ncalcdown: 1.2\n---\n\n\`\`\`data\nname: items\nprimaryKey: id\ncolumns:\n  id: string\n  qty: integer\n---\n`;
 
   await fs.writeFile(
     a,

@@ -30,7 +30,7 @@ A CalcDown project is one or more Markdown documents (recommended extension: `.c
 - `calc` — CalcScript (sandboxed subset) defining computed nodes/tables
 - `view` — standardized, schema-validated views (`cards`, `table`, `chart`, `layout`)
 
-For multi-document projects, CalcDown 1.0 also defines:
+For multi-document projects, CalcDown 1.1+ also defines:
 
 - `calcdown.json` — a project manifest (`entry`, optional `include`, optional `lock`)
 - `calcdown.lock.json` — a lockfile (document + external data hashes)
@@ -40,7 +40,7 @@ For multi-document projects, CalcDown 1.0 also defines:
 ````md
 ---
 title: Savings growth
-calcdown: 1.1
+calcdown: 1.2
 ---
 
 ``` inputs
@@ -74,8 +74,10 @@ const final_balance = std.data.last(balances);
 ## Docs
 
 - `PURPOSE.md` — project goals and thesis
-- `docs/calcdown-1.1.md` — **current** file format + editor protocol
-- `docs/stdlib-1.1.md` — **current** standard library
+- `docs/calcdown-1.2.md` — **current** file format + editor protocol
+- `docs/stdlib-1.2.md` — **current** standard library
+- `docs/calcdown-1.1.md` — previous stable spec
+- `docs/stdlib-1.1.md` — previous stable stdlib
 - `docs/integration.md` — embedding CalcDown in other tools
 - `docs/integration-example.html` — copy/paste integration template
 - `docs/examples/*.calc.md` — executable examples (use latest spec)
@@ -145,7 +147,7 @@ Minimal embed (no bundler required):
 
   installCalcdownStyles();
 
-  const markdown = `---\ncalcdown: 1.1\n---\n\n\`\`\` calc\nconst x = 1 + 2;\n\`\`\``;
+  const markdown = `---\ncalcdown: 1.2\n---\n\n\`\`\` calc\nconst x = 1 + 2;\n\`\`\``;
   mountCalcdown(document.getElementById("calcdown"), markdown, { showMessages: true });
 </script>
 ```

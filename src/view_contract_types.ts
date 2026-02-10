@@ -5,6 +5,8 @@
 
 export type CalcdownViewType = "cards" | "table" | "chart" | "layout";
 
+export type ViewVisibility = boolean | string;
+
 export type ValueFormat =
   | "number"
   | "integer"
@@ -19,16 +21,34 @@ export type ValueFormat =
       scale?: number;
     };
 
-export interface CardsViewSpecItem {
+export interface CardsCompareSpec {
   key: string;
   label: string;
   format?: ValueFormat;
 }
 
+export interface CardsMetricItem {
+  key: string;
+  label: string;
+  format?: ValueFormat;
+  compare?: CardsCompareSpec;
+}
+
+export interface CardsSparklineItem {
+  type: "sparkline";
+  source: string;
+  key: string;
+  label: string;
+  kind: "line";
+}
+
+export type CardsViewSpecItem = CardsMetricItem | CardsSparklineItem;
+
 export interface CalcdownCardsView {
   id: string;
   type: "cards";
   library: "calcdown";
+  visible?: ViewVisibility;
   spec: {
     title?: string;
     items: CardsViewSpecItem[];
@@ -36,10 +56,16 @@ export interface CalcdownCardsView {
   line: number;
 }
 
+export interface TableDataBarSpec {
+  color?: string;
+  max?: number | "auto";
+}
+
 export interface TableViewColumn {
   key: string;
   label: string;
   format?: ValueFormat;
+  dataBar?: TableDataBarSpec;
   conditionalFormat?: ConditionalFormatRule[];
 }
 
@@ -63,6 +89,7 @@ export interface CalcdownTableView {
   type: "table";
   library: "calcdown";
   source: string;
+  visible?: ViewVisibility;
   spec: {
     title?: string;
     columns?: TableViewColumn[];
@@ -85,6 +112,7 @@ export interface CalcdownChartView {
   type: "chart";
   library: "calcdown";
   source: string;
+  visible?: ViewVisibility;
   spec: {
     title?: string;
     kind: "line" | "bar" | "combo";
@@ -106,6 +134,7 @@ export interface CalcdownLayoutView {
   id: string;
   type: "layout";
   library: "calcdown";
+  visible?: ViewVisibility;
   spec: LayoutSpec;
   line: number;
 }

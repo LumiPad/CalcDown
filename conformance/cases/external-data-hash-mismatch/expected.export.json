@@ -1,5 +1,5 @@
 {
-  "calcdown": "1.1",
+  "calcdown": "1.2",
   "documents": [
     "conformance/cases/external-data-hash-mismatch/entry.calc.md"
   ],

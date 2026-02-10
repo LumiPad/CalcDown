@@ -22,6 +22,15 @@ test("CalcScript compile: collects dependencies (arrow params do not leak)", () 
   );
 });
 
+test("CalcScript compile: collects dependencies (let bindings are scoped)", () => {
+  const source = ["const a = 1;", "const b = 2;", "const x = let { t = a + 1; } in t + b;"].join("\n");
+  const { nodes, messages } = compileCalcScript(source, 1);
+  assert.deepEqual(messages, []);
+  const x = nodes.find((n) => n.name === "x");
+  assert.ok(x);
+  assert.deepEqual(x.dependencies, ["a", "b"]);
+});
+
 test("CalcScript compile: validation errors surface as stable message codes", () => {
   const source = [
     "const a = 1;",
@@ -31,6 +40,9 @@ test("CalcScript compile: validation errors surface as stable message codes", ()
     "const p = (__proto__) => 1;",
     "const d = (x, x) => x;",
     "const ds = ({ __proto__ }) => 1;",
+    "const ls = let { std = 1; } in std;",
+    "const ld = let { x = 1; x = 2; } in x;",
+    "const lp = let { __proto__ = 1; } in 1;",
   ].join("\n");
 
   const { messages } = compileCalcScript(source, 1);
@@ -40,6 +52,9 @@ test("CalcScript compile: validation errors surface as stable message codes", ()
   assert.ok(codes.has("CD_CALC_DISALLOWED_OBJECT_KEY"));
   assert.ok(codes.has("CD_CALC_DISALLOWED_PARAM"));
   assert.ok(codes.has("CD_CALC_DUPLICATE_PARAM"));
+  assert.ok(codes.has("CD_CALC_LET_BINDING_RESERVED"));
+  assert.ok(codes.has("CD_CALC_DUPLICATE_BINDING"));
+  assert.ok(codes.has("CD_CALC_DISALLOWED_BINDING"));
 });
 
 test("CalcScript compile: multi-line parse errors report line/column", () => {
@@ -101,4 +116,39 @@ test("CalcScript eval: covers division, unsafe calls, destructuring errors, and 
 
   const missing = evaluateNodes([{ name: "a", dependencies: [], line: 1 }], {}, {}, tablePkByArray);
   assert.equal(Object.keys(missing.values).length, 0);
+});
+
+test("CalcScript eval: supports ?? short-circuit, let bindings, and object spread", () => {
+  const tablePkByArray = new WeakMap();
+
+  assert.equal(evaluateExpression(parseExpression("1 ?? unknown"), {}, {}, tablePkByArray), 1);
+  assert.equal(evaluateExpression(parseExpression("a ?? 2"), { a: null }, {}, tablePkByArray), 2);
+  assert.equal(evaluateExpression(parseExpression("a ?? 2"), { a: undefined }, {}, tablePkByArray), 2);
+  assert.equal(evaluateExpression(parseExpression("a ?? 2"), { a: 0 }, {}, tablePkByArray), 0);
+
+  assert.equal(evaluateExpression(parseExpression("let { a = 1; b = a + 1 } in b + 1"), {}, {}, tablePkByArray), 3);
+  assert.equal(evaluateExpression(parseExpression("let { x = 1 } in x"), { x: 9 }, {}, tablePkByArray), 1);
+  assert.throws(
+    () => evaluateExpression(parseExpression("let { std = 1 } in std"), {}, {}, tablePkByArray),
+    /reserved/
+  );
+
+  const src = Object.create(null);
+  src.x = 1;
+  const out = evaluateExpression(parseExpression("{ ...a, y: 2 }"), { a: src }, {}, tablePkByArray);
+  assert.equal(Object.getPrototypeOf(out), null);
+  assert.equal(out.x, 1);
+  assert.equal(out.y, 2);
+
+  assert.throws(
+    () => evaluateExpression(parseExpression("{ ...a }"), { a: 1 }, {}, tablePkByArray),
+    /Object spread requires an object/
+  );
+
+  const bad = Object.create(null);
+  bad["__proto__"] = 1;
+  assert.throws(
+    () => evaluateExpression(parseExpression("{ ...a }"), { a: bad }, {}, tablePkByArray),
+    /Disallowed object key: __proto__/
+  );
 });

@@ -9,6 +9,9 @@ import { parseExpression } from "./calcscript/parser.js";
 import { asString, bannedKeys, defaultLabelForKey, err, isPlainObject, sanitizeId } from "./view_contract_common.js";
 import { validateFormat } from "./view_contract_format.js";
 import type {
+  CardsCompareSpec,
+  CardsMetricItem,
+  CardsSparklineItem,
   CalcdownCardsView,
   CalcdownChartView,
   CalcdownLayoutView,
@@ -21,8 +24,27 @@ import type {
   ConditionalFormatStyleObject,
   LayoutItem,
   LayoutSpec,
+  TableDataBarSpec,
   TableViewColumn,
+  ViewVisibility,
 } from "./view_contract_types.js";
+
+function validateVisible(raw: unknown, line: number, messages: CalcdownMessage[]): ViewVisibility | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw === "boolean") return raw;
+  const text = asString(raw);
+  if (!text) {
+    err(messages, line, "CD_VIEW_VISIBLE", "visible must be a boolean or a non-empty CalcScript expression string");
+    return undefined;
+  }
+  try {
+    parseExpression(text);
+  } catch (e) {
+    err(messages, line, "CD_VIEW_VISIBLE", e instanceof Error ? e.message : "Invalid visible expression");
+    return undefined;
+  }
+  return text;
+}
 
 function validateCardsView(view: ParsedView, messages: CalcdownMessage[]): CalcdownCardsView | null {
   const line = view.line;
@@ -31,6 +53,7 @@ function validateCardsView(view: ParsedView, messages: CalcdownMessage[]): Calcd
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_ID", "cards view is missing required field: id");
     return null;
   }
+  const visible = validateVisible(view.visible, line, messages);
   const specRaw = view.spec;
   if (!isPlainObject(specRaw)) {
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_SPEC", "cards view is missing required object: spec");
@@ -44,14 +67,80 @@ function validateCardsView(view: ParsedView, messages: CalcdownMessage[]): Calcd
     return null;
   }
 
-  const items = [];
+  const items: Array<CardsMetricItem | CardsSparklineItem> = [];
   for (const it of itemsRaw) {
     if (!isPlainObject(it)) continue;
-    const key = asString(it.key);
+
+    const type = asString((it as any).type);
+    if (type) {
+      if (type !== "sparkline") {
+        err(messages, line, "CD_VIEW_CARDS_ITEM_TYPE", `Unsupported cards item type: ${type}`);
+        continue;
+      }
+
+      const source = asString((it as any).source);
+      if (!source) {
+        err(messages, line, "CD_VIEW_CARDS_SPARKLINE_SOURCE", "sparkline items require a non-empty string 'source'");
+        continue;
+      }
+      const key = asString((it as any).key);
+      if (!key) {
+        err(messages, line, "CD_VIEW_CARDS_SPARKLINE_KEY", "sparkline items require a non-empty string 'key'");
+        continue;
+      }
+      if (bannedKeys.has(key)) {
+        err(messages, line, "CD_VIEW_SCHEMA_DISALLOWED_KEY", `Disallowed sparkline key: ${key}`);
+        continue;
+      }
+
+      const label = asString((it as any).label) ?? defaultLabelForKey(key);
+      const kindRaw = asString((it as any).kind);
+      const kind = kindRaw ? kindRaw.trim() : "line";
+      if (kind !== "line") {
+        err(messages, line, "CD_VIEW_CARDS_SPARKLINE_KIND", "sparkline.kind must be 'line'");
+        continue;
+      }
+
+      items.push(Object.assign(Object.create(null), { type: "sparkline", source, key, label, kind: "line" }));
+      continue;
+    }
+
+    const key = asString((it as any).key);
     if (!key) continue;
-    const label = asString(it.label) ?? defaultLabelForKey(key);
-    const format = validateFormat(it.format, line, messages) ?? undefined;
-    items.push(Object.assign(Object.create(null), { key, label, ...(format ? { format } : {}) }));
+    if (bannedKeys.has(key)) {
+      err(messages, line, "CD_VIEW_SCHEMA_DISALLOWED_KEY", `Disallowed cards item key: ${key}`);
+      continue;
+    }
+    const label = asString((it as any).label) ?? defaultLabelForKey(key);
+    const format = validateFormat((it as any).format, line, messages) ?? undefined;
+
+    let compare: CardsCompareSpec | undefined;
+    const compareRaw = (it as any).compare;
+    if (compareRaw !== undefined) {
+      if (!isPlainObject(compareRaw)) {
+        err(messages, line, "CD_VIEW_CARDS_COMPARE", "cards item compare must be an object");
+      } else {
+        const ck = asString((compareRaw as any).key);
+        if (!ck) {
+          err(messages, line, "CD_VIEW_CARDS_COMPARE", "cards item compare.key must be a non-empty string");
+        } else if (bannedKeys.has(ck)) {
+          err(messages, line, "CD_VIEW_SCHEMA_DISALLOWED_KEY", `Disallowed compare key: ${ck}`);
+        } else {
+          const clabel = asString((compareRaw as any).label) ?? defaultLabelForKey(ck);
+          const cformat = validateFormat((compareRaw as any).format, line, messages) ?? undefined;
+          compare = Object.assign(Object.create(null), { key: ck, label: clabel, ...(cformat ? { format: cformat } : {}) });
+        }
+      }
+    }
+
+    items.push(
+      Object.assign(Object.create(null), {
+        key,
+        label,
+        ...(format ? { format } : {}),
+        ...(compare ? { compare } : {}),
+      })
+    );
   }
 
   if (items.length === 0) {
@@ -63,6 +152,7 @@ function validateCardsView(view: ParsedView, messages: CalcdownMessage[]): Calcd
     id,
     type: "cards",
     library: "calcdown",
+    ...(visible !== undefined ? { visible } : {}),
     spec: Object.assign(Object.create(null), { ...(title ? { title } : {}), items }),
     line,
   };
@@ -72,6 +162,37 @@ function validateTableColumns(raw: unknown, line: number, messages: CalcdownMess
   if (raw === undefined) return null;
   if (!Array.isArray(raw)) return null;
   const cols: TableViewColumn[] = [];
+
+  const validateDataBar = (barRaw: unknown): TableDataBarSpec | null => {
+    if (barRaw === undefined) return null;
+    if (!isPlainObject(barRaw)) {
+      err(messages, line, "CD_VIEW_TABLE_DATABAR", "dataBar must be an object");
+      return null;
+    }
+
+    const hasColor = Object.prototype.hasOwnProperty.call(barRaw, "color");
+    const color = asString((barRaw as any).color) ?? undefined;
+    if (hasColor && !color) {
+      err(messages, line, "CD_VIEW_TABLE_DATABAR", "dataBar.color must be a non-empty string");
+    }
+
+    const hasMax = Object.prototype.hasOwnProperty.call(barRaw, "max");
+    const maxRaw = hasMax ? (barRaw as any).max : undefined;
+    let max: number | "auto" | undefined = undefined;
+    if (hasMax) {
+      if (typeof maxRaw === "string") {
+        max = maxRaw.trim() === "auto" ? "auto" : undefined;
+        if (!max) err(messages, line, "CD_VIEW_TABLE_DATABAR", "dataBar.max must be a positive number or 'auto'");
+      } else if (typeof maxRaw === "number") {
+        if (!Number.isFinite(maxRaw) || maxRaw <= 0) err(messages, line, "CD_VIEW_TABLE_DATABAR", "dataBar.max must be a positive number or 'auto'");
+        else max = maxRaw;
+      } else {
+        err(messages, line, "CD_VIEW_TABLE_DATABAR", "dataBar.max must be a positive number or 'auto'");
+      }
+    }
+
+    return Object.assign(Object.create(null), { ...(color ? { color } : {}), ...(max !== undefined ? { max } : {}) });
+  };
 
   const validateConditionalStyle = (styleRaw: unknown): ConditionalFormatStyle | null => {
     if (typeof styleRaw === "string") {
@@ -158,8 +279,17 @@ function validateTableColumns(raw: unknown, line: number, messages: CalcdownMess
     }
     const label = asString(c.label) ?? defaultLabelForKey(key);
     const format = validateFormat(c.format, line, messages) ?? undefined;
+    const dataBar = validateDataBar((c as any).dataBar) ?? undefined;
     const conditionalFormat = validateConditionalFormat(c.conditionalFormat) ?? undefined;
-    cols.push(Object.assign(Object.create(null), { key, label, ...(format ? { format } : {}), ...(conditionalFormat ? { conditionalFormat } : {}) }));
+    cols.push(
+      Object.assign(
+        Object.create(null),
+        { key, label },
+        format ? { format } : {},
+        dataBar ? { dataBar } : {},
+        conditionalFormat ? { conditionalFormat } : {}
+      )
+    );
   }
   return cols.length ? cols : null;
 }
@@ -171,6 +301,7 @@ function validateTableView(view: ParsedView, messages: CalcdownMessage[]): Calcd
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_ID", "table view is missing required field: id");
     return null;
   }
+  const visible = validateVisible(view.visible, line, messages);
   const source = view.source ? view.source.trim() : null;
   if (!source) {
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_SOURCE", "table view is missing required field: source");
@@ -198,6 +329,7 @@ function validateTableView(view: ParsedView, messages: CalcdownMessage[]): Calcd
     type: "table",
     library: "calcdown",
     source,
+    ...(visible !== undefined ? { visible } : {}),
     spec: Object.assign(Object.create(null), {
       ...(title ? { title } : {}),
       ...(columns ? { columns } : {}),
@@ -260,6 +392,7 @@ function validateChartView(view: ParsedView, messages: CalcdownMessage[]): Calcd
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_ID", "chart view is missing required field: id");
     return null;
   }
+  const visible = validateVisible(view.visible, line, messages);
   const source = view.source ? view.source.trim() : null;
   if (!source) {
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_SOURCE", "chart view is missing required field: source");
@@ -309,6 +442,7 @@ function validateChartView(view: ParsedView, messages: CalcdownMessage[]): Calcd
     type: "chart",
     library: "calcdown",
     source,
+    ...(visible !== undefined ? { visible } : {}),
     spec: Object.assign(Object.create(null), { ...(title ? { title } : {}), kind, x, y }),
     line,
   };
@@ -351,12 +485,13 @@ function validateLayoutView(view: ParsedView, messages: CalcdownMessage[]): Calc
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_ID", "layout view is missing required field: id");
     return null;
   }
+  const visible = validateVisible(view.visible, line, messages);
   const spec = validateLayoutSpec(view.spec, line, messages);
   if (!spec) {
     err(messages, line, "CD_VIEW_SCHEMA_MISSING_SPEC", "layout view is missing required object: spec");
     return null;
   }
-  return { id, type: "layout", library: "calcdown", spec, line };
+  return { id, type: "layout", library: "calcdown", ...(visible !== undefined ? { visible } : {}), spec, line };
 }
 
 export function validateCalcdownParsedView(view: ParsedView, messages: CalcdownMessage[]): CalcdownView | null {

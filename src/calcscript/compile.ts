@@ -56,6 +56,14 @@ function collectDependencies(expr: Expr, out: Set<string>): void {
       collectDependencies(expr.consequent, out);
       collectDependencies(expr.alternate, out);
       return;
+    case "let": {
+      const deps = new Set<string>();
+      for (const b of expr.bindings) collectDependencies(b.expr, deps);
+      collectDependencies(expr.body, deps);
+      for (const b of expr.bindings) deps.delete(b.name);
+      for (const d of deps) out.add(d);
+      return;
+    }
     case "member":
       collectDependencies(expr.object, out);
       return;
@@ -68,7 +76,10 @@ function collectDependencies(expr: Expr, out: Set<string>): void {
       for (const a of expr.args) collectDependencies(a, out);
       return;
     case "object":
-      for (const p of expr.properties) collectDependencies(p.value, out);
+      for (const e of expr.entries) {
+        if (e.kind === "spread") collectDependencies(e.expr, out);
+        else collectDependencies(e.value, out);
+      }
       return;
     case "arrow": {
       const deps = new Set<string>();
@@ -112,6 +123,43 @@ function validateExpr(expr: Expr, messages: CalcdownMessage[], line: number, nod
       validateExpr(expr.consequent, messages, line, nodeName);
       validateExpr(expr.alternate, messages, line, nodeName);
       return;
+    case "let": {
+      const seen = new Set<string>();
+      for (const b of expr.bindings) {
+        const name = b.name;
+        if (name === "std") {
+          messages.push({
+            severity: "error",
+            code: "CD_CALC_LET_BINDING_RESERVED",
+            message: "The identifier 'std' is reserved and cannot be used as a let binding name",
+            line,
+            nodeName,
+          });
+        }
+        if (bannedProperties.has(name)) {
+          messages.push({
+            severity: "error",
+            code: "CD_CALC_DISALLOWED_BINDING",
+            message: `Disallowed let binding name: ${name}`,
+            line,
+            nodeName,
+          });
+        }
+        if (seen.has(name)) {
+          messages.push({
+            severity: "error",
+            code: "CD_CALC_DUPLICATE_BINDING",
+            message: `Duplicate let binding name: ${name}`,
+            line,
+            nodeName,
+          });
+        }
+        seen.add(name);
+        validateExpr(b.expr, messages, line, nodeName);
+      }
+      validateExpr(expr.body, messages, line, nodeName);
+      return;
+    }
     case "member":
       if (bannedProperties.has(expr.property)) {
         messages.push({
@@ -133,17 +181,21 @@ function validateExpr(expr: Expr, messages: CalcdownMessage[], line: number, nod
       for (const a of expr.args) validateExpr(a, messages, line, nodeName);
       return;
     case "object":
-      for (const p of expr.properties) {
-        if (bannedProperties.has(p.key)) {
+      for (const e of expr.entries) {
+        if (e.kind === "spread") {
+          validateExpr(e.expr, messages, line, nodeName);
+          continue;
+        }
+        if (bannedProperties.has(e.key)) {
           messages.push({
             severity: "error",
             code: "CD_CALC_DISALLOWED_OBJECT_KEY",
-            message: `Disallowed object key: ${p.key}`,
+            message: `Disallowed object key: ${e.key}`,
             line,
             nodeName,
           });
         }
-        validateExpr(p.value, messages, line, nodeName);
+        validateExpr(e.value, messages, line, nodeName);
       }
       return;
     case "arrow": {

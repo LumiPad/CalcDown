@@ -136,8 +136,15 @@ function inferConditional(consequent: Inferred, alternate: Inferred): Inferred {
 
 function inferObjectLiteral(expr: ObjectLiteralExpr, env: Record<string, Inferred>): Inferred {
   const props: Record<string, Inferred> = Object.create(null);
-  for (const p of expr.properties) {
-    props[p.key] = inferExpr(p.value, env);
+  for (const e of expr.entries) {
+    if (e.kind === "spread") {
+      const spread = inferExpr(e.expr, env);
+      if (spread.kind === "object") {
+        for (const [k, v] of Object.entries(spread.props)) props[k] = v;
+      }
+      continue;
+    }
+    props[e.key] = inferExpr(e.value, env);
   }
   return { kind: "object", props };
 }
@@ -279,6 +286,10 @@ function inferExpr(expr: Expr, env: Record<string, Inferred>): Inferred {
       const a = inferExpr(expr.left, env);
       const b = inferExpr(expr.right, env);
 
+      if (expr.op === "??") {
+        return inferConditional(a, b);
+      }
+
       if (expr.op === "&") {
         if (a.kind === "vector" || b.kind === "vector") return vector(scalarType("string"));
         return scalar("string");
@@ -294,6 +305,13 @@ function inferExpr(expr: Expr, env: Record<string, Inferred>): Inferred {
       const c = inferExpr(expr.consequent, env);
       const a = inferExpr(expr.alternate, env);
       return inferConditional(c, a);
+    }
+    case "let": {
+      const child: Record<string, Inferred> = Object.create(env);
+      for (const b of expr.bindings) {
+        child[b.name] = inferExpr(b.expr, child);
+      }
+      return inferExpr(expr.body, child);
     }
     case "member": {
       const obj = inferExpr(expr.object, env);

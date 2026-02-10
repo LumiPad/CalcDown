@@ -1,6 +1,6 @@
 ---
 title: Conformance — data.sortBy
-calcdown: 1.1
+calcdown: 1.2
 ---
 
 # sortBy runtime ordering

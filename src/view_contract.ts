@@ -7,13 +7,18 @@ export { defaultLabelForKey } from "./view_contract_common.js";
 export { validateViewsFromBlocks } from "./view_contract_validate.js";
 export type {
   CalcdownViewType,
+  ViewVisibility,
   ValueFormat,
+  CardsCompareSpec,
+  CardsMetricItem,
+  CardsSparklineItem,
   CardsViewSpecItem,
   CalcdownCardsView,
   ConditionalFormatPresetStyle,
   ConditionalFormatStyleObject,
   ConditionalFormatStyle,
   ConditionalFormatRule,
+  TableDataBarSpec,
   TableViewColumn,
   CalcdownTableView,
   ChartAxisSpec,

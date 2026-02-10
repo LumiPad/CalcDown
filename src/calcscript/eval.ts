@@ -64,6 +64,11 @@ function evalExpr(expr: Expr, env: Record<string, unknown>, ctx: EvalContext): u
         if (a) return true;
         return assertBoolean(evalExpr(expr.right, env, ctx), "Binary '||'");
       }
+      if (expr.op === "??") {
+        const a = evalExpr(expr.left, env, ctx);
+        if (a !== null && a !== undefined) return a;
+        return evalExpr(expr.right, env, ctx);
+      }
 
       const a = evalExpr(expr.left, env, ctx);
       const b = evalExpr(expr.right, env, ctx);
@@ -99,6 +104,16 @@ function evalExpr(expr: Expr, env: Record<string, unknown>, ctx: EvalContext): u
     case "conditional": {
       const test = assertBoolean(evalExpr(expr.test, env, ctx), "Conditional test");
       return test ? evalExpr(expr.consequent, env, ctx) : evalExpr(expr.alternate, env, ctx);
+    }
+    case "let": {
+      const child: Record<string, unknown> = Object.create(env);
+      for (const b of expr.bindings) {
+        const name = b.name;
+        if (name === "std") throw new Error("The identifier 'std' is reserved and cannot be used as a let binding name");
+        if (isBannedProperty(name)) throw new Error(`Disallowed let binding name: ${name}`);
+        child[name] = evalExpr(b.expr, child, ctx);
+      }
+      return evalExpr(expr.body, child, ctx);
     }
     case "member": {
       const obj = evalExpr(expr.object, env, ctx);
@@ -153,9 +168,21 @@ function evalExpr(expr: Expr, env: Record<string, unknown>, ctx: EvalContext): u
     }
     case "object": {
       const out: Record<string, unknown> = Object.create(null);
-      for (const p of expr.properties) {
-        if (isBannedProperty(p.key)) throw new Error(`Disallowed object key: ${p.key}`);
-        out[p.key] = evalExpr(p.value, env, ctx);
+      for (const e of expr.entries) {
+        if (e.kind === "spread") {
+          const src = evalExpr(e.expr, env, ctx);
+          if (!src || typeof src !== "object" || Array.isArray(src)) {
+            throw new Error("Object spread requires an object");
+          }
+          for (const k of Object.keys(src as Record<string, unknown>)) {
+            if (isBannedProperty(k)) throw new Error(`Disallowed object key: ${k}`);
+            out[k] = (src as Record<string, unknown>)[k];
+          }
+          continue;
+        }
+
+        if (isBannedProperty(e.key)) throw new Error(`Disallowed object key: ${e.key}`);
+        out[e.key] = evalExpr(e.value, env, ctx);
       }
       return out;
     }

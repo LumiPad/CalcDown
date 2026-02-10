@@ -1,6 +1,6 @@
 ---
 title: Conformance — YAML view blocks
-calcdown: 1.1
+calcdown: 1.2
 ---
 
 # YAML view blocks

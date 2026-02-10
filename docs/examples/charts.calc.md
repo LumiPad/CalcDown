@@ -1,6 +1,6 @@
 ---
 title: Charts (CalcDown example)
-calcdown: 1.1
+calcdown: 1.2
 ---
 
 # Charts

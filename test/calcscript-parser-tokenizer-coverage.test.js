@@ -38,6 +38,26 @@ test("CalcScript tokenizer: reports unsupported tokens and malformed literals", 
   });
 });
 
+test("CalcScript tokenizer: recognizes spread/nullish and let punctuation", () => {
+  const t = new Tokenizer("... ?? = ; =>");
+  assert.equal(t.next().type, "spread");
+
+  const op = t.next();
+  assert.equal(op.type, "op");
+  assert.equal(op.value, "??");
+
+  const eq = t.next();
+  assert.equal(eq.type, "punct");
+  assert.equal(eq.value, "=");
+
+  const semi = t.next();
+  assert.equal(semi.type, "punct");
+  assert.equal(semi.value, ";");
+
+  assert.equal(t.next().type, "arrow");
+  assert.equal(t.next().type, "eof");
+});
+
 test("CalcScript parser: strict/loose inequality tokens normalize to '!='", () => {
   const a = parseExpression("1 != 2");
   assert.equal(a.kind, "binary");
@@ -105,6 +125,45 @@ test("CalcScript parser: covers uncommon grammar branches and diagnostics", () =
   assert.throws(
     () => parseExpression("{ a: 1 b: 2 }"),
     (err) => err instanceof CalcScriptSyntaxError && /Expected ',' or '}' in object literal/.test(err.message)
+  );
+});
+
+test("CalcScript parser: parses object spread entries, let expressions, and ?? precedence", () => {
+  const obj = parseExpression("{ ...row, a: 1, b }");
+  assert.equal(obj.kind, "object");
+  assert.equal(obj.entries.length, 3);
+  assert.equal(obj.entries[0].kind, "spread");
+  assert.equal(obj.entries[1].kind, "property");
+  assert.equal(obj.entries[1].key, "a");
+  assert.equal(obj.entries[2].kind, "property");
+  assert.equal(obj.entries[2].key, "b");
+  assert.equal(obj.entries[2].shorthand, true);
+
+  const letExpr = parseExpression("let { a = 1; b = a + 1 } in b + 1");
+  assert.equal(letExpr.kind, "let");
+  assert.equal(letExpr.bindings.length, 2);
+  assert.equal(letExpr.bindings[0].name, "a");
+  assert.equal(letExpr.bindings[1].name, "b");
+
+  const nullish1 = parseExpression("a ?? b || c");
+  assert.equal(nullish1.kind, "binary");
+  assert.equal(nullish1.op, "??");
+  assert.equal(nullish1.right.kind, "binary");
+  assert.equal(nullish1.right.op, "||");
+
+  const nullish2 = parseExpression("a || b ?? c");
+  assert.equal(nullish2.kind, "binary");
+  assert.equal(nullish2.op, "??");
+  assert.equal(nullish2.left.kind, "binary");
+  assert.equal(nullish2.left.op, "||");
+
+  assert.throws(
+    () => parseExpression("let { a 1 } in a"),
+    (err) => err instanceof CalcScriptSyntaxError && /Expected '=' in let binding/.test(err.message)
+  );
+  assert.throws(
+    () => parseExpression("let { a = 1 } a"),
+    (err) => err instanceof CalcScriptSyntaxError && /Expected 'in' after let bindings/.test(err.message)
   );
 });
 

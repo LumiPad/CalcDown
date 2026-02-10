@@ -218,6 +218,43 @@ export const CALCDOWN_BASE_CSS = `
   color: var(--calcdown-text);
 }
 
+.calcdown-root .card .delta {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.calcdown-root .card .delta-value {
+  font-weight: 650;
+}
+
+.calcdown-root .card .delta-label {
+  color: var(--calcdown-muted);
+}
+
+.calcdown-root .card .delta-positive .delta-value {
+  color: #047857;
+}
+
+.calcdown-root .card .delta-negative .delta-value {
+  color: #b91c1c;
+}
+
+.calcdown-root .card .delta-neutral .delta-value {
+  color: #334155;
+}
+
+.calcdown-root .sparkline-wrap {
+  margin-top: 8px;
+  color: var(--calcdown-sparkline, #3b82f6);
+}
+
+.calcdown-root .sparkline {
+  display: block;
+}
+
 .calcdown-root table {
   width: 100%;
   border-collapse: separate;
@@ -249,6 +286,25 @@ export const CALCDOWN_BASE_CSS = `
   border-radius: var(--calcdown-radius-sm);
   font-size: 12px;
   background: var(--calcdown-surface);
+}
+
+.calcdown-root td.has-data-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.calcdown-root td.has-data-bar .data-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.calcdown-root td.has-data-bar .cell-text {
+  position: relative;
+  z-index: 1;
 }
 
 .calcdown-root td.cf-positive {

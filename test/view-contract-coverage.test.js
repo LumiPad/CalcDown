@@ -408,3 +408,94 @@ test("validateViewsFromBlocks deduplicates IDs, warns on non-calcdown libs, and 
   assert.ok(found.has("CD_VIEW_UNSUPPORTED_LIBRARY"));
   assert.ok(found.has("CD_VIEW_PARSE"));
 });
+
+test("validateCalcdownParsedView supports visible, cards sparkline/compare, and table dataBar", () => {
+  const cardsMessages = [];
+  const cards = validateCalcdownParsedView(
+    {
+      line: 1,
+      id: "c_visible",
+      type: "cards",
+      visible: "x > 0",
+      spec: {
+        items: [
+          { type: "sparkline", source: "t", key: "revenue", label: "Revenue", kind: "line" },
+          { key: "mrr", compare: { key: "mrr_delta", label: "vs last month", format: "percent" } },
+        ],
+      },
+    },
+    cardsMessages
+  );
+  assert.ok(cards);
+  assert.equal(cards.visible, "x > 0");
+  assert.equal(cards.spec.items[0].type, "sparkline");
+  assert.equal(cards.spec.items[1].compare.key, "mrr_delta");
+  assert.deepEqual(cardsMessages, []);
+
+  const badVisibleMessages = [];
+  const badVisible = validateCalcdownParsedView(
+    { line: 1, id: "c_bad_visible", type: "cards", visible: "x >", spec: { items: [{ key: "a" }] } },
+    badVisibleMessages
+  );
+  assert.ok(badVisible);
+  assert.ok(codes(badVisibleMessages).includes("CD_VIEW_VISIBLE"));
+
+  const badCardsMessages = [];
+  assert.equal(
+    validateCalcdownParsedView(
+      {
+        line: 1,
+        id: "c_bad_item",
+        type: "cards",
+        spec: {
+          items: [
+            { type: "nope" },
+            { type: "sparkline", source: "", key: "x" },
+            { type: "sparkline", source: "t", key: "x", kind: "bar" },
+          ],
+        },
+      },
+      badCardsMessages
+    ),
+    null
+  );
+  const badCodes = new Set(codes(badCardsMessages));
+  assert.ok(badCodes.has("CD_VIEW_CARDS_ITEM_TYPE"));
+  assert.ok(badCodes.has("CD_VIEW_CARDS_SPARKLINE_SOURCE"));
+  assert.ok(badCodes.has("CD_VIEW_CARDS_SPARKLINE_KIND"));
+  assert.ok(badCodes.has("CD_VIEW_CARDS_ITEMS_EMPTY"));
+
+  const badCompareMessages = [];
+  const badCompare = validateCalcdownParsedView(
+    { line: 1, id: "c_bad_compare", type: "cards", spec: { items: [{ key: "a", compare: { key: "__proto__" } }] } },
+    badCompareMessages
+  );
+  assert.ok(badCompare);
+  assert.ok(codes(badCompareMessages).includes("CD_VIEW_SCHEMA_DISALLOWED_KEY"));
+
+  const tableMessages = [];
+  const table = validateCalcdownParsedView(
+    {
+      line: 1,
+      id: "t_bar",
+      type: "table",
+      source: "rows",
+      visible: false,
+      spec: {
+        columns: [
+          { key: "revenue", dataBar: { color: "#3b82f6", max: "auto" } },
+          { key: "bad", dataBar: true },
+          { key: "bad2", dataBar: { max: 0 } },
+          { key: "bad3", dataBar: { max: "nope" } },
+        ],
+      },
+    },
+    tableMessages
+  );
+  assert.ok(table);
+  assert.equal(table.visible, false);
+  assert.equal(table.spec.columns[0].dataBar.max, "auto");
+
+  const tableCodes = new Set(codes(tableMessages));
+  assert.ok(tableCodes.has("CD_VIEW_TABLE_DATABAR"));
+});

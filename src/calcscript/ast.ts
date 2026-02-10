@@ -11,6 +11,7 @@ export type Expr =
   | UnaryExpr
   | BinaryExpr
   | ConditionalExpr
+  | LetExpr
   | MemberExpr
   | IndexExpr
   | CallExpr
@@ -45,7 +46,7 @@ export interface UnaryExpr {
 
 export interface BinaryExpr {
   kind: "binary";
-  op: "+" | "-" | "*" | "/" | "**" | "&" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
+  op: "+" | "-" | "*" | "/" | "**" | "&" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "??";
   left: Expr;
   right: Expr;
 }
@@ -55,6 +56,17 @@ export interface ConditionalExpr {
   test: Expr;
   consequent: Expr;
   alternate: Expr;
+}
+
+export interface LetExpr {
+  kind: "let";
+  bindings: LetBinding[];
+  body: Expr;
+}
+
+export interface LetBinding {
+  name: string;
+  expr: Expr;
 }
 
 export interface MemberExpr {
@@ -100,11 +112,19 @@ export interface ArrowFunctionExpr {
 
 export interface ObjectLiteralExpr {
   kind: "object";
-  properties: ObjectProperty[];
+  entries: ObjectLiteralEntry[];
 }
 
-export interface ObjectProperty {
+export type ObjectLiteralEntry = ObjectPropertyEntry | ObjectSpreadEntry;
+
+export interface ObjectPropertyEntry {
+  kind: "property";
   key: string;
   value: Expr;
   shorthand: boolean;
+}
+
+export interface ObjectSpreadEntry {
+  kind: "spread";
+  expr: Expr;
 }

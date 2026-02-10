@@ -9,6 +9,9 @@ import { evaluateExpression } from "../calcscript/eval.js";
 import { std } from "../stdlib/std.js";
 import {
   defaultLabelForKey,
+  type CardsMetricItem,
+  type CardsSparklineItem,
+  type CardsViewSpecItem,
   type CalcdownView,
   type ConditionalFormatRule,
   type ConditionalFormatStyle,
@@ -117,9 +120,66 @@ function resolveFormat(raw: ValueFormat | undefined, inferredFrom: InputType | u
   return raw;
 }
 
+function downsample(values: number[], maxPoints: number): number[] {
+  if (values.length <= maxPoints) return values;
+  const step = Math.ceil(values.length / maxPoints);
+  const out: number[] = [];
+  for (let i = 0; i < values.length; i += step) out.push(values[i]!);
+  return out;
+}
+
+function isSparklineItem(item: CardsViewSpecItem): item is CardsSparklineItem {
+  return (item as any)?.type === "sparkline";
+}
+
+function buildSparklineSvg(values: number[]): SVGSVGElement | null {
+  const ys = values.filter((v) => typeof v === "number" && Number.isFinite(v));
+  if (ys.length < 2) return null;
+
+  const points = downsample(ys, 80);
+  let ymin = points[0]!;
+  let ymax = points[0]!;
+  for (const y of points) {
+    ymin = Math.min(ymin, y);
+    ymax = Math.max(ymax, y);
+  }
+  if (ymax === ymin) ymax = ymin + 1;
+
+  const width = 100;
+  const height = 32;
+  const pad = 2;
+  const plotW = width - pad * 2;
+  const plotH = height - pad * 2;
+
+  const sx = (i: number) => pad + (i / (points.length - 1)) * plotW;
+  const sy = (y: number) => pad + (1 - (y - ymin) / (ymax - ymin)) * plotH;
+
+  const d = points
+    .map((y, i) => `${i === 0 ? "M" : "L"} ${sx(i).toFixed(2)} ${sy(y).toFixed(2)}`)
+    .join(" ");
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("width", "100%");
+  svg.setAttribute("height", String(height));
+  svg.classList.add("sparkline");
+
+  const path = document.createElementNS(svgNS, "path");
+  path.setAttribute("d", d);
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "2");
+  path.setAttribute("stroke-linejoin", "round");
+  path.setAttribute("stroke-linecap", "round");
+  svg.appendChild(path);
+
+  return svg;
+}
+
 function buildCardsView(
   title: string | null,
-  items: { key: string; label: string; format?: ValueFormat }[],
+  items: CardsViewSpecItem[],
   values: Record<string, unknown>,
   valueTypes: Record<string, InputType> | undefined
 ): HTMLElement {
@@ -134,17 +194,78 @@ function buildCardsView(
     const card = document.createElement("div");
     card.className = "card";
 
+    if (isSparklineItem(item)) {
+      const k = document.createElement("div");
+      k.className = "k";
+      k.textContent = item.label;
+      card.appendChild(k);
+
+      const seriesRaw = values[item.source];
+      const rows = Array.isArray(seriesRaw) ? seriesRaw : [];
+      const ys: number[] = [];
+      for (const r of rows) {
+        if (!r || typeof r !== "object" || Array.isArray(r)) continue;
+        const v = Object.prototype.hasOwnProperty.call(r, item.key) ? (r as Record<string, unknown>)[item.key] : undefined;
+        if (typeof v === "number" && Number.isFinite(v)) ys.push(v);
+      }
+
+      const svg = buildSparklineSvg(ys);
+      if (svg) {
+        const wrap = document.createElement("div");
+        wrap.className = "sparkline-wrap";
+        wrap.appendChild(svg);
+        card.appendChild(wrap);
+      } else {
+        const v = document.createElement("div");
+        v.className = "v muted";
+        v.textContent = "—";
+        card.appendChild(v);
+      }
+
+      cards.appendChild(card);
+      continue;
+    }
+
+    const metric = item as CardsMetricItem;
     const k = document.createElement("div");
     k.className = "k";
-    k.textContent = item.label ?? item.key;
+    k.textContent = metric.label ?? metric.key;
 
     const v = document.createElement("div");
     v.className = "v";
-    const fmt = resolveFormat(item.format, valueTypes ? valueTypes[item.key] : undefined);
-    v.textContent = formatFormattedValue(values[item.key], fmt);
+    const fmt = resolveFormat(metric.format, valueTypes ? valueTypes[metric.key] : undefined);
+    v.textContent = formatFormattedValue(values[metric.key], fmt);
 
     card.appendChild(k);
     card.appendChild(v);
+
+    const compare = metric.compare;
+    if (compare) {
+      const cmpValRaw = values[compare.key];
+      const cmpFmt = resolveFormat(compare.format, valueTypes ? valueTypes[compare.key] : undefined);
+      const cmpText = formatFormattedValue(cmpValRaw, cmpFmt);
+
+      const delta = document.createElement("div");
+      delta.className = "delta";
+
+      const deltaValue = document.createElement("span");
+      deltaValue.className = "delta-value";
+      deltaValue.textContent = cmpText;
+
+      const deltaLabel = document.createElement("span");
+      deltaLabel.className = "delta-label";
+      deltaLabel.textContent = compare.label;
+
+      if (typeof cmpValRaw === "number" && Number.isFinite(cmpValRaw)) {
+        const sign = cmpValRaw === 0 ? 0 : cmpValRaw > 0 ? 1 : -1;
+        delta.classList.add(sign > 0 ? "delta-positive" : sign < 0 ? "delta-negative" : "delta-neutral");
+      }
+
+      delta.appendChild(deltaValue);
+      delta.appendChild(deltaLabel);
+      card.appendChild(delta);
+    }
+
     cards.appendChild(card);
   }
 
@@ -179,6 +300,34 @@ function inferredFormatForType(t: DataTable["columns"][string] | undefined): Val
 
 const CONDFORM_EXPR_CACHE = new Map<string, ReturnType<typeof parseExpression>>();
 const EMPTY_TABLE_PK_BY_ARRAY = new WeakMap<object, { primaryKey: string }>();
+const VISIBLE_EXPR_CACHE = new Map<string, ReturnType<typeof parseExpression>>();
+
+function isViewVisible(view: CalcdownView, values: Record<string, unknown>): boolean {
+  const raw = view.visible as unknown;
+  if (raw === undefined) return true;
+  if (raw === true) return true;
+  if (raw === false) return false;
+  if (typeof raw !== "string" || !raw.trim()) return true;
+
+  const when = raw.trim();
+  let expr = VISIBLE_EXPR_CACHE.get(when);
+  if (!expr) {
+    try {
+      expr = parseExpression(when);
+      VISIBLE_EXPR_CACHE.set(when, expr);
+    } catch {
+      return true;
+    }
+  }
+
+  try {
+    const out = evaluateExpression(expr, values, std, EMPTY_TABLE_PK_BY_ARRAY);
+    if (typeof out === "boolean") return out;
+    return true;
+  } catch {
+    return true;
+  }
+}
 
 function applyConditionalFormatting(
   td: HTMLTableCellElement,
@@ -240,6 +389,26 @@ function buildTableView(
 
   const schemaCols = opts.schema?.columns ?? null;
   const pkKey = opts.schema?.primaryKey ?? null;
+
+  const dataBars = new Map<string, { color: string; max: number }>();
+  for (const c of columns) {
+    const bar = c.dataBar;
+    if (!bar) continue;
+    const color = typeof bar.color === "string" && bar.color.trim() ? bar.color.trim() : "var(--calcdown-data-bar, #3b82f6)";
+    let max: number | null = null;
+    if (typeof bar.max === "number" && Number.isFinite(bar.max) && bar.max > 0) {
+      max = bar.max;
+    } else {
+      let m = 0;
+      for (const row of rows) {
+        const v = Object.prototype.hasOwnProperty.call(row, c.key) ? row[c.key] : undefined;
+        if (typeof v !== "number" || !Number.isFinite(v)) continue;
+        m = Math.max(m, Math.abs(v));
+      }
+      max = m > 0 ? m : 1;
+    }
+    dataBars.set(c.key, { color, max });
+  }
 
   const table = document.createElement("table");
   const thead = document.createElement("thead");
@@ -320,7 +489,26 @@ function buildTableView(
 
         td.appendChild(input);
       } else {
-        td.textContent = formatFormattedValue(value, c.format);
+        const text = formatFormattedValue(value, c.format);
+        const bar = dataBars.get(c.key) ?? null;
+        if (bar && typeof value === "number" && Number.isFinite(value)) {
+          const ratio = Math.min(1, Math.abs(value) / bar.max);
+          td.classList.add("has-data-bar");
+
+          const barEl = document.createElement("div");
+          barEl.className = "data-bar";
+          barEl.style.width = `${(ratio * 100).toFixed(2)}%`;
+          barEl.style.backgroundColor = bar.color;
+
+          const span = document.createElement("span");
+          span.className = "cell-text";
+          span.textContent = text;
+
+          td.appendChild(barEl);
+          td.appendChild(span);
+        } else {
+          td.textContent = text;
+        }
       }
 
       tr.appendChild(td);
@@ -383,15 +571,11 @@ function buildLayoutItem(
 
   const target = viewById.get(item.ref);
   if (!target) return buildMissingView(item.ref);
+  if (!isViewVisible(target, ctx.values)) return null;
 
   if (target.type === "cards") {
     const title = target.spec.title ?? null;
-    const items = target.spec.items.map((it) => ({
-      key: it.key,
-      label: it.label,
-      ...(it.format ? { format: it.format as ValueFormat } : {}),
-    }));
-    return buildCardsView(title, items, ctx.values, ctx.valueTypes);
+    return buildCardsView(title, target.spec.items as CardsViewSpecItem[], ctx.values, ctx.valueTypes);
   }
 
   if (target.type === "table") {
@@ -406,11 +590,13 @@ function buildLayoutItem(
     const cols = (target.spec.columns && target.spec.columns.length ? target.spec.columns : defaultColumnsForSource(sourceName, rowObjs, ctx.schemas)).map((c) => {
       const fmtRaw = c.format ? (c.format as ValueFormat) : undefined;
       const fmt = resolveFormat(fmtRaw, schemaCols ? schemaCols[c.key] : undefined);
+      const dataBar = c.dataBar;
       const conditionalFormat = c.conditionalFormat;
       return Object.assign(
         Object.create(null),
         { key: c.key, label: c.label },
         fmt ? { format: fmt } : {},
+        dataBar ? { dataBar } : {},
         conditionalFormat ? { conditionalFormat } : {}
       );
     });
@@ -480,7 +666,7 @@ export function renderCalcdownViews(opts: RenderViewsOptions): void {
   if (opts.views.length === 0) return;
 
   const viewById = new Map(opts.views.map((v) => [v.id, v]));
-  const rootLayout = opts.views.find((v) => v.type === "layout") ?? null;
+  const rootLayout = opts.views.find((v) => v.type === "layout" && isViewVisible(v, opts.values)) ?? null;
 
   const ctx: {
     values: Record<string, unknown>;
@@ -500,6 +686,7 @@ export function renderCalcdownViews(opts: RenderViewsOptions): void {
 
   for (const v of opts.views) {
     if (v.type === "layout") continue;
+    if (!isViewVisible(v, opts.values)) continue;
     const el = buildLayoutItem({ kind: "ref", ref: v.id }, viewById, ctx);
     if (el) opts.container.appendChild(el);
   }

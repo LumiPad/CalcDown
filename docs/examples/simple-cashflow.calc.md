@@ -1,6 +1,6 @@
 ---
 title: Simple cashflow (CalcDown example)
-calcdown: 1.1
+calcdown: 1.2
 ---
 
 # Simple cashflow
