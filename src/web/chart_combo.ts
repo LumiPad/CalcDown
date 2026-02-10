@@ -59,27 +59,14 @@ export function buildComboChartCard(opts: ChartCardOptions): HTMLElement {
     return view;
   }
 
-  let ymin = 0;
-  let ymax = 0;
-  let found = false;
+  let ymin = Number.POSITIVE_INFINITY;
+  let ymax = Number.NEGATIVE_INFINITY;
   for (const c of categories) {
     for (const y of c.ys) {
       if (y === null) continue;
-      if (!found) {
-        ymin = y;
-        ymax = y;
-        found = true;
-        continue;
-      }
       ymin = Math.min(ymin, y);
       ymax = Math.max(ymax, y);
     }
-  }
-  if (!found) {
-    const msg = document.createElement("div");
-    msg.textContent = `Not enough data to plot series by ${opts.xField}.`;
-    view.appendChild(msg);
-    return view;
   }
   if (ymax === ymin) ymax = ymin + 1;
 

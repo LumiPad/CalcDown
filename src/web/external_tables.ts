@@ -17,18 +17,18 @@ async function sha256Hex(text: string): Promise<string> {
   return out;
 }
 
-function parseCsvRowsToObjects(csvText: string): { header: string[]; rows: Record<string, string>[] } {
+function parseCsvRowsToObjects(csvText: string): { header: string[]; rows: Record<string, string | undefined>[] } {
   const parsed = parseCsv(csvText);
   if (!parsed.header.length) return { header: [], rows: [] };
 
   const header = parsed.header;
-  const rows: Record<string, string>[] = [];
+  const rows: Record<string, string | undefined>[] = [];
   for (const row of parsed.rows) {
-    const obj: Record<string, string> = Object.create(null);
+    const obj: Record<string, string | undefined> = Object.create(null);
     for (let i = 0; i < header.length; i++) {
       const key = header[i];
       if (!key) continue;
-      obj[key] = row[i] ?? "";
+      obj[key] = row[i];
     }
     rows.push(obj);
   }
@@ -190,4 +190,3 @@ export async function loadExternalTables(programTables: DataTable[], originUrl: 
 
   return { overrides, messages, ok };
 }
-

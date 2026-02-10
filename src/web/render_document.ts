@@ -76,7 +76,7 @@ function renderCodeBlock(container: HTMLElement, block: FencedCodeBlock): void {
 
   const header = document.createElement("div");
   header.className = "calcdown-code-title";
-  header.textContent = block.info ? block.info.trim() : block.lang ? block.lang : "code";
+  header.textContent = block.info.trim() || "code";
 
   const pre = document.createElement("pre");
   const code = document.createElement("code");

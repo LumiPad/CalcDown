@@ -69,10 +69,10 @@ export function stripNarrativeComments(markdown: string): string {
   const strippedLines = strippedHtml.split(/\r?\n/);
 
   const out: string[] = [];
-  const n = Math.max(originalLines.length, strippedLines.length);
+  const n = originalLines.length;
   for (let i = 0; i < n; i++) {
-    const original = originalLines[i] ?? "";
-    const stripped = strippedLines[i] ?? "";
+    const original = originalLines[i]!;
+    const stripped = strippedLines[i]!;
 
     const trimmedStart = stripped.trimStart();
     if (trimmedStart.startsWith("%%")) continue;
@@ -216,9 +216,9 @@ function appendInlines(parent: HTMLElement, src: string): void {
 
 function lineIsListItem(t: string): { kind: "ul" | "ol"; text: string } | null {
   const mUl = t.match(/^[-*+]\s+(.+)$/);
-  if (mUl) return { kind: "ul", text: mUl[1] ?? "" };
+  if (mUl) return { kind: "ul", text: mUl[1]! };
   const mOl = t.match(/^[0-9]+\.\s+(.+)$/);
-  if (mOl) return { kind: "ol", text: mOl[1] ?? "" };
+  if (mOl) return { kind: "ol", text: mOl[1]! };
   return null;
 }
 
@@ -228,7 +228,7 @@ export function renderMarkdownText(container: HTMLElement, markdown: string): vo
   let i = 0;
 
   while (i < lines.length) {
-    const raw = lines[i] ?? "";
+    const raw = lines[i]!;
     const trimmed = raw.trimEnd();
     const t = trimmed.trim();
 
@@ -246,7 +246,7 @@ export function renderMarkdownText(container: HTMLElement, markdown: string): vo
     const heading = t.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
       const level = Math.max(1, Math.min(6, heading[1]!.length));
-      const text = heading[2] ?? "";
+      const text = heading[2]!;
       const h = document.createElement(`h${level}`) as HTMLHeadingElement;
       appendInlines(h, text);
       container.appendChild(h);
@@ -258,7 +258,7 @@ export function renderMarkdownText(container: HTMLElement, markdown: string): vo
     if (listItem) {
       const list = document.createElement(listItem.kind === "ul" ? "ul" : "ol");
       while (i < lines.length) {
-        const lt = (lines[i] ?? "").trimEnd().trim();
+        const lt = lines[i]!.trimEnd().trim();
         const it = lineIsListItem(lt);
         if (!it || it.kind !== listItem.kind) break;
         const li = document.createElement("li");
@@ -273,7 +273,7 @@ export function renderMarkdownText(container: HTMLElement, markdown: string): vo
     // Paragraph: collect consecutive non-blank lines until a new block starts.
     const paraLines: string[] = [];
     while (i < lines.length) {
-      const lraw = lines[i] ?? "";
+      const lraw = lines[i]!;
       const ltrimmed = lraw.trimEnd();
       const lt = ltrimmed.trim();
       if (!lt) break;

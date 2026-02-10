@@ -54,14 +54,13 @@ export function parseCsv(text: string): ParsedCsv {
   const lines = rawLines.filter((l) => l.trim() !== "");
   if (lines.length === 0) return { header: [], rows: [] };
 
-  const header = parseCsvLine(lines[0] ?? "").map((h) => h.trim());
+  const header = parseCsvLine(lines[0]!).map((h) => h.trim());
   const rows: string[][] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const row = parseCsvLine(lines[i] ?? "");
+    const row = parseCsvLine(lines[i]!);
     rows.push(row);
   }
 
   return { header, rows };
 }
-

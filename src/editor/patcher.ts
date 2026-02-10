@@ -155,8 +155,8 @@ export function applyPatch(source: string, op: PatchOp, map: SourceMap): string 
 
     const prefix = beforeComment.slice(0, eqIdx + 1);
     const afterEq = beforeComment.slice(eqIdx + 1);
-    const wsAfterEq = afterEq.match(/^\s*/)?.[0] ?? "";
-    const trailing = afterEq.match(/\s*$/)?.[0] ?? "";
+    const wsAfterEq = afterEq.match(/^\s*/)![0];
+    const trailing = afterEq.match(/\s*$/)![0];
     const nextValue = inputDefaultText(def.type, op.value);
 
     lines[lineIdx] = `${prefix}${wsAfterEq}${nextValue}${trailing}${comment}`;
@@ -182,7 +182,7 @@ export function applyPatch(source: string, op: PatchOp, map: SourceMap): string 
     const currentLine = lines[lineIdx];
     if (currentLine === undefined) throw new Error(`Row line out of range for '${op.tableName}': ${pk}`);
 
-    const indent = currentLine.match(/^\s*/)?.[0] ?? "";
+    const indent = currentLine.match(/^\s*/)![0];
     const rest = currentLine.slice(indent.length);
     const trimmedEnd = rest.trimEnd();
     const trailing = rest.slice(trimmedEnd.length);

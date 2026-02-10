@@ -317,7 +317,6 @@ export function buildBarChartCard(opts: ChartCardOptions): HTMLElement {
       ymax = Math.max(ymax, y);
     }
   }
-  if (!found) ymin = 0;
   if (ymax === ymin) ymax = ymin + 1;
 
   // Include 0 so bar charts get a meaningful baseline.

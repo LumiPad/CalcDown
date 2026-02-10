@@ -98,21 +98,21 @@ export function monotoneCubicPath(points: { x: number; y: number }[]): string {
     const p1 = points[i + 1]!;
     const dxi = p1.x - p0.x;
     dx.push(dxi);
-    m.push(dxi === 0 ? 0 : (p1.y - p0.y) / dxi);
+    m.push((p1.y - p0.y) / dxi);
   }
 
   const t: number[] = new Array(n).fill(0);
-  t[0] = m[0] ?? 0;
-  t[n - 1] = m[n - 2] ?? 0;
+  t[0] = m[0]!;
+  t[n - 1] = m[n - 2]!;
   for (let i = 1; i < n - 1; i++) {
-    const m0 = m[i - 1] ?? 0;
-    const m1 = m[i] ?? 0;
+    const m0 = m[i - 1]!;
+    const m1 = m[i]!;
     if (m0 === 0 || m1 === 0 || Math.sign(m0) !== Math.sign(m1)) {
       t[i] = 0;
       continue;
     }
-    const dx0 = dx[i - 1] ?? 0;
-    const dx1 = dx[i] ?? 0;
+    const dx0 = dx[i - 1]!;
+    const dx1 = dx[i]!;
     const w1 = 2 * dx1 + dx0;
     const w2 = dx1 + 2 * dx0;
     t[i] = (w1 + w2) / (w1 / m0 + w2 / m1);
@@ -125,11 +125,10 @@ export function monotoneCubicPath(points: { x: number; y: number }[]): string {
     const p1 = points[i + 1]!;
     const dxi = p1.x - p0.x;
     const c1x = p0.x + dxi / 3;
-    const c1y = p0.y + (t[i] ?? 0) * (dxi / 3);
+    const c1y = p0.y + t[i]! * (dxi / 3);
     const c2x = p1.x - dxi / 3;
-    const c2y = p1.y - (t[i + 1] ?? 0) * (dxi / 3);
+    const c2y = p1.y - t[i + 1]! * (dxi / 3);
     d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
   }
   return d;
 }
-

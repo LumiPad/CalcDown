@@ -7,7 +7,6 @@ import { formatIsoDate } from "../util/date.js";
 import type { ValueFormat } from "../view_contract.js";
 
 function shouldGroupInteger(n: number): boolean {
-  if (!Number.isFinite(n)) return true;
   if (!Number.isInteger(n)) return true;
   const abs = Math.abs(n);
   // Avoid "2,004" for year-like values.
@@ -19,7 +18,7 @@ export function formatValue(v: unknown): string {
   if (v instanceof Date) return formatIsoDate(v);
   if (typeof v === "number") {
     if (!Number.isFinite(v)) return String(v);
-    const useGrouping = Number.isInteger(v) ? shouldGroupInteger(v) : true;
+    const useGrouping = shouldGroupInteger(v);
     return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6, useGrouping }).format(v);
   }
   if (typeof v === "boolean") return v ? "true" : "false";

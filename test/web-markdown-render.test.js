@@ -2,73 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { renderMarkdownText } from "../dist/web/markdown_render.js";
-
-function createFakeDocument() {
-  class FakeText {
-    constructor(text) {
-      this.nodeType = 3;
-      this.value = String(text);
-    }
-    get textContent() {
-      return this.value;
-    }
-    set textContent(v) {
-      this.value = String(v);
-    }
-  }
-
-  class FakeElement {
-    constructor(tagName) {
-      this.nodeType = 1;
-      this.tagName = String(tagName).toLowerCase();
-      this.children = [];
-    }
-    appendChild(node) {
-      this.children.push(node);
-      return node;
-    }
-    get textContent() {
-      return this.children.map((c) => c.textContent ?? "").join("");
-    }
-    set textContent(v) {
-      this.children = [new FakeText(v)];
-    }
-  }
-
-  return {
-    createElement(tagName) {
-      return new FakeElement(tagName);
-    },
-    createTextNode(text) {
-      return new FakeText(text);
-    },
-  };
-}
-
-function walk(node, out = []) {
-  out.push(node);
-  if (node && typeof node === "object" && Array.isArray(node.children)) {
-    for (const c of node.children) walk(c, out);
-  }
-  return out;
-}
-
-function nodesByTag(root, tagName) {
-  return walk(root).filter((n) => n.nodeType === 1 && n.tagName === tagName);
-}
-
-function withFakeDom(fn) {
-  const prev = globalThis.document;
-  globalThis.document = createFakeDocument();
-  try {
-    return fn();
-  } finally {
-    globalThis.document = prev;
-  }
-}
+import { FakeDocument, nodesByTag, withFakeDom } from "./fake_dom.js";
 
 test("markdown renderer: headings, paragraphs, hr, and list blocks", () =>
-  withFakeDom(() => {
+  withFakeDom(
+    () => {
     const root = document.createElement("div");
     renderMarkdownText(
       root,
@@ -92,10 +30,13 @@ test("markdown renderer: headings, paragraphs, hr, and list blocks", () =>
     assert.equal(root.children[1].textContent, "line one line two");
     assert.equal(root.children[3].children.length, 2);
     assert.equal(root.children[4].children.length, 2);
-  }));
+    },
+    { document: new FakeDocument() }
+  ));
 
 test("markdown renderer: inline formatting and safe/disallowed links", () =>
-  withFakeDom(() => {
+  withFakeDom(
+    () => {
     const root = document.createElement("div");
     renderMarkdownText(
       root,
@@ -123,10 +64,13 @@ test("markdown renderer: inline formatting and safe/disallowed links", () =>
     // Inline parser currently closes href at first ')' in markdown link syntax.
     assert.ok(codes.some((c) => c.textContent.startsWith("javascript:alert(")));
     assert.ok(spans.some((s) => s.textContent === "bad"));
-  }));
+    },
+    { document: new FakeDocument() }
+  ));
 
 test("markdown renderer: comment stripping, escaping, and code spans", () =>
-  withFakeDom(() => {
+  withFakeDom(
+    () => {
     const root = document.createElement("div");
     renderMarkdownText(
       root,
@@ -145,10 +89,13 @@ test("markdown renderer: comment stripping, escaping, and code spans", () =>
     assert.match(text, /\*literal\*/);
     assert.doesNotMatch(text, /remove me/);
     assert.doesNotMatch(text, /remove too/);
-  }));
+    },
+    { document: new FakeDocument() }
+  ));
 
 test("markdown renderer: allows relative hrefs and rejects dangerous schemes", () =>
-  withFakeDom(() => {
+  withFakeDom(
+    () => {
     const root = document.createElement("div");
     renderMarkdownText(
       root,
@@ -175,10 +122,13 @@ test("markdown renderer: allows relative hrefs and rejects dangerous schemes", (
     // For links like [x](scheme:fn(1)), href text is captured up to first ')'.
     assert.ok(codeTexts.some((v) => v.startsWith("java script:alert(")));
     assert.ok(codeTexts.includes("data:text/plain,abc"));
-  }));
+    },
+    { document: new FakeDocument() }
+  ));
 
 test("markdown renderer: handles edge-case escapes and unclosed inline markers", () =>
-  withFakeDom(() => {
+  withFakeDom(
+    () => {
     const root = document.createElement("div");
     renderMarkdownText(
       root,
@@ -202,4 +152,68 @@ test("markdown renderer: handles edge-case escapes and unclosed inline markers",
 
     const links = nodesByTag(root, "a");
     assert.equal(links.length, 0);
-  }));
+    },
+    { document: new FakeDocument() }
+  ));
+
+test("markdown renderer: extra branches (http/upper schemes, mixed bullets, multiline comments)", () =>
+  withFakeDom(
+    () => {
+      const root = document.createElement("div");
+      renderMarkdownText(
+        root,
+        [
+          "a",
+          "<!--",
+          "multi",
+          "line",
+          "-->",
+          "b",
+          "",
+          "* star",
+          "+ plus",
+          "- dash",
+          "",
+          "[http](http://example.com)",
+          "[upper](HTTP://example.com)",
+          "not a link [x] ok",
+        ].join("\n")
+      );
+
+      assert.ok(root.textContent.includes("a"));
+      assert.ok(root.textContent.includes("b"));
+      assert.doesNotMatch(root.textContent, /multi/);
+
+      const uls = nodesByTag(root, "ul");
+      assert.equal(uls.length, 1);
+      assert.equal(uls[0].children.length, 3);
+
+      const links = nodesByTag(root, "a");
+      assert.deepEqual(
+        links.map((l) => l.href),
+        ["http://example.com", "HTTP://example.com"]
+      );
+    },
+    { document: new FakeDocument() }
+  ));
+
+test("markdown renderer: hr variants and multiline code/comment edge", () =>
+  withFakeDom(
+    () => {
+      const root = document.createElement("div");
+      renderMarkdownText(
+        root,
+        [
+          "`<!--",
+          "not code span -->`",
+          "***",
+          "___",
+          "- - -",
+        ].join("\n")
+      );
+
+      const hrs = nodesByTag(root, "hr");
+      assert.equal(hrs.length, 2);
+    },
+    { document: new FakeDocument() }
+  ));

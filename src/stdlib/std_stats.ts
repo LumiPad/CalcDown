@@ -105,9 +105,7 @@ export function createStatsModule(): Readonly<Record<string, unknown>> {
 
     stdev(xs: unknown): number {
       const v = variance(xs);
-      const s = Math.sqrt(v);
-      if (!Number.isFinite(s)) throw new Error("Non-finite numeric result");
-      return s;
+      return Math.sqrt(v);
     },
 
     percentile(xs: unknown, p: unknown): number {
@@ -130,7 +128,6 @@ export function createStatsModule(): Readonly<Record<string, unknown>> {
       if (vx <= EPS || vy <= EPS) throw new Error("correlation: undefined (zero variance)");
       const cov = covariance(both.xs, both.ys);
       const out = cov / (Math.sqrt(vx) * Math.sqrt(vy));
-      if (!Number.isFinite(out)) throw new Error("Non-finite numeric result");
       return out;
     },
 

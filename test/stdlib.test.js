@@ -871,10 +871,12 @@ test("std.array utilities", () => {
   assert.deepEqual(std.array.take([1], 5), [1]);
   assert.throws(() => std.array.take("nope", 1), /take: expected array/);
   assert.throws(() => std.array.take([1], -1), /take: n must be a non-negative integer/);
+  assert.throws(() => std.array.take([1], "x"), /take: n must be a non-negative integer/);
 
   assert.deepEqual(std.array.drop([1, 2, 3], 2), [3]);
   assert.deepEqual(std.array.drop([1], 5), []);
   assert.throws(() => std.array.drop([1], 1.5), /drop: n must be a non-negative integer/);
+  assert.throws(() => std.array.drop([1], Number.POSITIVE_INFINITY), /drop: n must be a non-negative integer/);
 
   assert.deepEqual(std.array.concat([1], [2, 3]), [1, 2, 3]);
   assert.throws(() => std.array.concat([1], "x"), /concat: expected array/);
@@ -883,15 +885,20 @@ test("std.array utilities", () => {
     [1, "a"],
     [2, "b"],
   ]);
+  assert.deepEqual(std.array.zip([], []), []);
   assert.throws(() => std.array.zip([1], [1, 2]), /zip: array length mismatch/);
 
   assert.deepEqual(std.array.flatten([1, [2, 3], 4]), [1, 2, 3, 4]);
+  assert.deepEqual(std.array.flatten([]), []);
   assert.throws(() => std.array.flatten("nope"), /flatten: expected array/);
 
   assert.equal(std.array.at([10, 20, 30], 0), 10);
   assert.equal(std.array.at([10, 20, 30], -1), 30);
   assert.equal(std.array.at([10, 20, 30], 99), null);
+  assert.equal(std.array.at([10, 20, 30], -99), null);
   assert.throws(() => std.array.at([1], 1.5), /at: index must be an integer/);
+  assert.throws(() => std.array.at([1], "x"), /at: index must be an integer/);
+  assert.throws(() => std.array.at([1], Number.POSITIVE_INFINITY), /at: index must be an integer/);
 
   const d0 = new Date(Date.UTC(2024, 0, 1));
   const d1 = new Date(Date.UTC(2024, 0, 2));
@@ -902,28 +909,38 @@ test("std.array utilities", () => {
   assert.equal(std.array.indexOf([undefined, 1], undefined), 0);
   assert.equal(std.array.indexOf([d0, d1], new Date(Date.UTC(2024, 0, 2))), 1);
   assert.equal(std.array.indexOf([1, 2, 3], 4), -1);
+  assert.equal(std.array.indexOf([], 1), -1);
+  assert.throws(() => std.array.indexOf([1], Number.POSITIVE_INFINITY), /indexOf: expected finite numbers/);
   assert.throws(() => std.array.indexOf([1], { x: 1 }), /indexOf: expected comparable scalars/);
   assert.throws(() => std.array.indexOf([{}], 1), /indexOf: expected comparable scalars/);
 
   assert.equal(std.array.find([1, 2, 3], (x) => x > 1), 2);
   assert.equal(std.array.find([1, 2, 3], (x) => x > 9), null);
+  assert.equal(std.array.find([], () => true), null);
   assert.throws(() => std.array.find([1], 123), /find: expected predicate function/);
   assert.throws(() => std.array.find([1], () => 1), /find: predicate must return boolean/);
 
   assert.equal(std.array.some([1, 2, 3], (x) => x === 2), true);
   assert.equal(std.array.some([1, 2, 3], (x) => x === 9), false);
+  assert.equal(std.array.some([], () => true), false);
   assert.equal(std.array.every([1, 2, 3], (x) => x > 0), true);
   assert.equal(std.array.every([1, 2, 3], (x) => x > 2), false);
+  assert.equal(std.array.every([], () => true), true);
+  assert.throws(() => std.array.some([1], () => 1), /some: predicate must return boolean/);
   assert.throws(() => std.array.some([1], "nope"), /some: expected predicate function/);
+  assert.throws(() => std.array.every([1], "nope"), /every: expected predicate function/);
   assert.throws(() => std.array.every([1], () => "nope"), /every: predicate must return boolean/);
 
   assert.deepEqual(std.array.distinct([1, 1, 2, 1, 3]), [1, 2, 3]);
   assert.deepEqual(std.array.distinct([d0, d0, d1]), [d0, d1]);
+  assert.deepEqual(std.array.distinct([]), []);
+  assert.throws(() => std.array.distinct([new Date(Number.NaN)]), /distinct: invalid date/);
   assert.throws(() => std.array.distinct([{}]), /distinct: expected comparable scalars/);
 
   assert.equal(std.array.product([2, 3, 4]), 24);
   assert.throws(() => std.array.product([]), /product: empty array/);
   assert.throws(() => std.array.product([1, Number.NaN]), /product: expected finite number array/);
+  assert.throws(() => std.array.product([1, "2"]), /product: expected finite number array/);
   assert.throws(() => std.array.product([1e308, 1e308]), /Non-finite numeric result/);
 
   const rows = [
@@ -932,9 +949,19 @@ test("std.array utilities", () => {
     { cat: "b" },
   ];
   assert.deepEqual(Object.assign({}, std.array.countBy(rows, "cat")), { a: 2, b: 1 });
+  const rowsWithNumber = [...rows, { cat: 1 }];
+  assert.deepEqual(Object.assign({}, std.array.countBy(rowsWithNumber, "cat")), { a: 2, b: 1, 1: 1 });
+  assert.deepEqual(Object.assign({}, std.array.countBy([], "cat")), {});
+  assert.throws(() => std.array.countBy(rows, 1), /countBy: expected key string/);
   assert.throws(() => std.array.countBy(rows, ""), /countBy: expected key string/);
   assert.throws(() => std.array.countBy([1, 2], "x"), /countBy: expected row objects/);
+  assert.throws(() => std.array.countBy([[]], "x"), /countBy: expected row objects/);
+  assert.throws(() => std.array.countBy([null], "x"), /countBy: expected row objects/);
   assert.throws(() => std.array.countBy([{ x: 1 }], "cat"), /countBy: missing key: cat/);
+  assert.throws(
+    () => std.array.countBy([{ cat: Number.POSITIVE_INFINITY }], "cat"),
+    /countBy: key values must be string or finite number/
+  );
   assert.throws(() => std.array.countBy([{ cat: {} }], "cat"), /countBy: key values must be string or finite number/);
   assert.throws(() => std.array.countBy([{ cat: "__proto__" }], "cat"), /disallowed key/);
 });
@@ -943,22 +970,37 @@ test("std.stats helpers", () => {
   assert.equal(std.stats.median([3, 1, 2]), 2);
   assert.equal(std.stats.median([1, 2, 3, 4]), 2.5);
   assert.throws(() => std.stats.median([]), /median: expected at least 1 values/);
+  assert.throws(() => std.stats.median("nope"), /median: expected array/);
+  assert.throws(() => std.stats.median([1, "2"]), /median: expected finite number array/);
 
   assert.equal(std.stats.variance([1, 2, 3]), 1);
   assert.equal(std.stats.stdev([1, 2, 3]), 1);
   assert.throws(() => std.stats.variance([1]), /variance: expected at least 2 values/);
+  assert.throws(() => std.stats.variance("nope"), /variance: expected array/);
+  assert.throws(() => std.stats.variance([1, Number.NaN]), /variance: expected finite number array/);
+  assert.throws(() => std.stats.variance([-1e308, 1e308]), /Non-finite numeric result/);
 
   assert.equal(std.stats.percentile([10], 50), 10);
   assert.equal(std.stats.percentile([0, 10], 0), 0);
   assert.equal(std.stats.percentile([0, 10], 100), 10);
   assert.equal(std.stats.percentile([0, 10], 50), 5);
   assert.throws(() => std.stats.percentile([1, 2, 3], -1), /percentile: p must be a finite number in \[0, 100\]/);
+  assert.throws(() => std.stats.percentile([1, 2, 3], "x"), /percentile: p must be a finite number in \[0, 100\]/);
+  assert.throws(
+    () => std.stats.percentile([1, 2, 3], Number.POSITIVE_INFINITY),
+    /percentile: p must be a finite number in \[0, 100\]/
+  );
+  assert.throws(() => std.stats.percentile([1, 2, 3], 101), /percentile: p must be a finite number in \[0, 100\]/);
+  assert.throws(() => std.stats.percentile([-1e308, 1e308], 50), /Non-finite numeric result/);
 
   assert.deepEqual(std.stats.quartiles([0, 10, 20, 30]), [7.5, 15, 22.5]);
 
   assert.equal(std.stats.covariance([1, 2, 3], [1, 2, 3]), 1);
+  assert.throws(() => std.stats.covariance([1, 2], [1, 2, 3]), /covariance: array length mismatch/);
+  assert.throws(() => std.stats.covariance([-1e308, 1e308], [-1e308, 1e308]), /Non-finite numeric result/);
   assert.equal(std.stats.correlation([1, 2, 3], [1, 2, 3]), 1);
   assert.throws(() => std.stats.correlation([1, 1, 1], [1, 2, 3]), /correlation: undefined/);
+  assert.throws(() => std.stats.correlation([1, 2, 3], [5, 5, 5]), /correlation: undefined/);
 
   const fit = std.stats.linearFit([0, 1, 2], [0, 2, 4]);
   assert.equal(Object.getPrototypeOf(fit), null);
@@ -972,9 +1014,18 @@ test("std.stats helpers", () => {
   approxEqual(flat.intercept, 5, 1e-12);
   assert.equal(flat.r2, 1);
 
+  assert.throws(() => std.stats.linearFit([0, 1, 2], [1e308, -1e308, 1e308]), /Non-finite numeric result/);
+  assert.throws(() => std.stats.linearFit([0, 1], [-1e308, 1e308]), /Non-finite numeric result/);
   assert.throws(() => std.stats.linearFit([1, 1], [1, 2]), /linearFit: xs has zero variance/);
   assert.throws(() => std.stats.predict(null, 1), /predict: expected fit object/);
+  assert.throws(() => std.stats.predict(1, 1), /predict: expected fit object/);
+  assert.throws(() => std.stats.predict({ slope: "x", intercept: 0 }, 1), /predict: slope must be finite/);
+  assert.throws(() => std.stats.predict({ slope: Number.POSITIVE_INFINITY, intercept: 0 }, 1), /predict: slope must be finite/);
+  assert.throws(() => std.stats.predict({ slope: 1, intercept: "x" }, 1), /predict: intercept must be finite/);
   assert.throws(() => std.stats.predict({ slope: 1, intercept: Number.NaN }, 1), /predict: intercept must be finite/);
+  assert.throws(() => std.stats.predict({ slope: 1, intercept: 0 }, Number.NaN), /predict: x must be finite/);
+  assert.throws(() => std.stats.predict({ slope: 1, intercept: 0 }, "x"), /predict: x must be finite/);
+  assert.throws(() => std.stats.predict({ slope: 1e308, intercept: 1e308 }, 2), /Non-finite numeric result/);
 });
 
 test("std.date extensions", () => {

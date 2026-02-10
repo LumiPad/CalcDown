@@ -61,6 +61,7 @@ test("editor patcher: updateInput coercion for booleans, numbers, dates, and fal
     "i : integer = 1",
     "n : number = 1.2",
     "c : currency[ISK] = 1",
+    "c2 : currency = 1.2",
     "d : date = 2025-01-01",
     "dt : datetime = 2025-01-01T00:00:00Z",
     "s : string = \"a\"",
@@ -73,10 +74,11 @@ test("editor patcher: updateInput coercion for booleans, numbers, dates, and fal
       input("i", 2, type("integer"), 1),
       input("n", 3, type("number"), 1.2),
       input("c", 4, type("currency", ["ISK"]), 1),
-      input("d", 5, type("date"), "2025-01-01"),
-      input("dt", 6, type("datetime"), "2025-01-01T00:00:00Z"),
-      input("s", 7, type("string"), "a"),
-      input("u", 8, type("custom"), 0),
+      input("c2", 5, type("currency"), 1.2),
+      input("d", 6, type("date"), "2025-01-01"),
+      input("dt", 7, type("datetime"), "2025-01-01T00:00:00Z"),
+      input("s", 8, type("string"), "a"),
+      input("u", 9, type("custom"), 0),
     ],
     tables: [],
   });
@@ -86,6 +88,7 @@ test("editor patcher: updateInput coercion for booleans, numbers, dates, and fal
   next = applyPatch(next, { kind: "updateInput", name: "i", value: 2.9 }, map);
   next = applyPatch(next, { kind: "updateInput", name: "n", value: "3.5" }, map);
   next = applyPatch(next, { kind: "updateInput", name: "c", value: 10.6 }, map);
+  next = applyPatch(next, { kind: "updateInput", name: "c2", value: 10.6 }, map);
   next = applyPatch(next, { kind: "updateInput", name: "d", value: new Date("2025-03-04T00:00:00Z") }, map);
   next = applyPatch(next, { kind: "updateInput", name: "dt", value: new Date("2025-03-04T01:02:03Z") }, map);
   next = applyPatch(next, { kind: "updateInput", name: "s", value: 123 }, map);
@@ -95,6 +98,7 @@ test("editor patcher: updateInput coercion for booleans, numbers, dates, and fal
   assert.match(next, /i : integer = 2/);
   assert.match(next, /n : number = 3.5/);
   assert.match(next, /c : currency\[ISK\] = 11/);
+  assert.match(next, /c2 : currency = 10.6/);
   assert.match(next, /d : date = 2025-03-04/);
   assert.match(next, /dt : datetime = 2025-03-04T01:02:03.000Z/);
   assert.match(next, /s : string = "123"/);
@@ -237,12 +241,68 @@ test("editor patcher: updateTableCell covers string/boolean/custom branches and 
 
   const source = '{"id":"a","qty":1,"flag":false,"note":"x","meta":{"k":1}}\n';
   let next = applyPatch(source, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "note", value: 123 }, map);
+  next = applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "note", value: "y" }, map);
   next = applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "flag", value: "1" }, map);
+  next = applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "flag", value: "0" }, map);
+  next = applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "flag", value: true }, map);
   next = applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "meta", value: { a: 1 } }, map);
 
-  assert.match(next, /"note":"123"/);
   assert.match(next, /"flag":true/);
+  assert.match(next, /"note":"y"/);
   assert.match(next, /"meta":\{"a":1\}/);
 
+  assert.throws(
+    () => applyPatch(next, { kind: "updateTableCell", tableName: "items", primaryKey: "a", column: "flag", value: "maybe" }, map),
+    /Expected boolean value/
+  );
+
   assert.equal(applyPatch(next, { kind: "noop" }, map), next);
+});
+
+test("editor patcher: additional updateInput coercions and primaryKey number support", () => {
+  const source = [
+    "b0 : boolean = false",
+    "b1 : boolean = false",
+    "d : date = 2025-01-01",
+    "dt : datetime = 2025-01-01T00:00:00Z",
+    "i : integer = 1",
+  ].join("\n");
+
+  const map = buildSourceMap({
+    inputs: [
+      input("b0", 1, type("boolean"), false),
+      input("b1", 2, type("boolean"), false),
+      input("d", 3, type("date"), "2025-01-01"),
+      input("dt", 4, type("datetime"), "2025-01-01T00:00:00Z"),
+      input("i", 5, type("integer"), 1),
+    ],
+    tables: [
+      {
+        name: "numPk",
+        primaryKey: "id",
+        columns: { id: type("integer"), qty: type("integer") },
+        rows: [{ id: 1, qty: 1 }],
+        rowMap: [{ primaryKey: "1", line: 1 }],
+        line: 1,
+      },
+    ],
+  });
+
+  let next = source;
+  next = applyPatch(next, { kind: "updateInput", name: "b0", value: true }, map);
+  next = applyPatch(next, { kind: "updateInput", name: "b1", value: "0" }, map);
+  next = applyPatch(next, { kind: "updateInput", name: "d", value: " 2025-02-03 " }, map);
+  next = applyPatch(next, { kind: "updateInput", name: "dt", value: " 2025-02-03T01:02:03Z " }, map);
+
+  assert.match(next, /b0 : boolean = true/);
+  assert.match(next, /b1 : boolean = false/);
+  assert.match(next, /d : date = 2025-02-03/);
+  assert.match(next, /dt : datetime = 2025-02-03T01:02:03Z/);
+  assert.ok(next.includes("\n"));
+
+  assert.throws(() => applyPatch(source, { kind: "updateInput", name: "i", value: "oops" }, map), /Expected integer value/);
+
+  const tableSource = '{"id":1,"qty":1}\n';
+  const patched = applyPatch(tableSource, { kind: "updateTableCell", tableName: "numPk", primaryKey: 1, column: "qty", value: 2 }, map);
+  assert.match(patched, /"id":1,"qty":2/);
 });
