@@ -19,6 +19,8 @@ export function validateFormat(raw: unknown, line: number, messages: CalcdownMes
   if (raw === undefined) return null;
 
   if (typeof raw === "string") {
+    if (raw === "percent_points") return "percent";
+    if (raw === "percent_ratio") return "percent01";
     if (
       raw === "number" ||
       raw === "integer" ||

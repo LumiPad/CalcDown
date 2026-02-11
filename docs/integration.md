@@ -38,6 +38,8 @@ Many CalcDown views accept a `format` for values.
 
 - `format: "percent"` formats numbers as **percent points** (e.g. `14.77` → `14.77%`).
 - For **ratio** percentages (`0..1`), use `format: "percent01"` (e.g. `0.1477` → `14.77%`) or `format: { kind: "percent", scale: 100 }`.
+- Aliases: `format: "percent_points"` ≡ `"percent"`, and `format: "percent_ratio"` ≡ `"percent01"`.
+- For `part/whole` style percentages, prefer `std.percent.of(part, whole)` (returns percent points, e.g. `std.percent.of(48, 130)` → `36.923...`).
 - For currency formatting, use `format: { kind: "currency", currency: "USD" }` (explicit), or in the built-in web renderer use `format: "currency"` / `format: { kind: "currency" }` to infer the ISO code from declared CalcDown types.
 
 Note: in the built-in web renderer, `format: "currency"` will try to infer the ISO currency code from declared CalcDown types (e.g. `Currency[USD]`) and propagate it through common derived expressions (arithmetic, `std.math.sum`, `std.table.map` outputs). If it can’t infer a code, it falls back to plain number formatting.

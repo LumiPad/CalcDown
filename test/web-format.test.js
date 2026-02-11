@@ -25,6 +25,16 @@ test("formatFormattedValue: percent01 formats ratio values", () => {
   assert.match(out, /^\p{Number}{2}%$/u);
 });
 
+test("formatFormattedValue: percent_ratio formats ratio values", () => {
+  const out = formatFormattedValue(0.13, "percent_ratio");
+  assert.match(out, /^\p{Number}{2}%$/u);
+});
+
+test("formatFormattedValue: percent_points formats percent points", () => {
+  const out = formatFormattedValue(5, "percent_points");
+  assert.match(out, /^\p{Number}+%$/u);
+});
+
 test("formatFormattedValue: currency uses Intl defaults when digits omitted", () => {
   const expected = new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -71,6 +81,7 @@ test("view formats accept percent01 and percent scale", () => {
           items: [
             { key: "a", format: "percent01" },
             { key: "b", format: { kind: "percent", scale: 100 } },
+            { key: "c", format: "percent_ratio" },
           ],
         },
       },

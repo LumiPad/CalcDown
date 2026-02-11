@@ -57,6 +57,8 @@ test("view_contract_format validates strings and object formats", () => {
   assert.equal(validateFormat(undefined, 1, messages), null);
   assert.equal(validateFormat("integer", 1, messages), "integer");
   assert.equal(validateFormat("percent01", 1, messages), "percent01");
+  assert.equal(validateFormat("percent_points", 1, messages), "percent");
+  assert.equal(validateFormat("percent_ratio", 1, messages), "percent01");
   assert.equal(validateFormat("invalid", 1, messages), null);
   assert.equal(validateFormat(123, 1, messages), null);
   assert.equal(validateFormat({ kind: "nope" }, 2, messages), null);

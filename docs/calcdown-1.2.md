@@ -102,6 +102,7 @@ CalcDown 1.2 expands the standard library (see `docs/stdlib-1.2.md`) with:
 - `std.array` — array utilities beyond `std.data.*`
 - `std.stats` — basic statistics for financial models
 - `std.date` — extended date helpers and ranges
+- `std.percent` — percent helpers (`of`)
 
 ## 3) View contract additions
 

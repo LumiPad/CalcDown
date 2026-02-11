@@ -11,7 +11,9 @@ export type ValueFormat =
   | "number"
   | "integer"
   | "percent"
+  | "percent_points"
   | "percent01"
+  | "percent_ratio"
   | "currency"
   | "date"
   | {

@@ -11,6 +11,7 @@ import { createFinanceModule } from "./std_finance.js";
 import { createLogicModule } from "./std_logic.js";
 import { createLookupModule } from "./std_lookup.js";
 import { createMathModule } from "./std_math.js";
+import { createPercentModule } from "./std_percent.js";
 import { createStatsModule } from "./std_stats.js";
 import { createTableModule } from "./std_table.js";
 import { createTextModule } from "./std_text.js";
@@ -24,6 +25,7 @@ export function createStd(context?: StdRuntimeContext): Readonly<Record<string, 
   const data = createDataModule();
   const std = makeModule({
     math: createMathModule(),
+    percent: createPercentModule(),
     text: createTextModule(),
     logic: createLogicModule(),
     array: createArrayModule(),

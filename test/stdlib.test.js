@@ -139,6 +139,17 @@ test("std.math.abs / sign / sqrt / exp / ln / log10 / trig / helpers / constants
   assert.throws(() => std.math.pow(2, Number.POSITIVE_INFINITY), /pow: exp must be finite/);
 });
 
+test("std.percent.of", () => {
+  approxEqual(std.percent.of(48, 130), (48 / 130) * 100);
+  assert.deepEqual(std.percent.of([1, 2], 4), [25, 50]);
+  assert.deepEqual(std.percent.of([1, 2], [4, 4]), [25, 50]);
+
+  assert.throws(() => std.percent.of(1, 0), /percent\.of: whole must be non-zero/);
+  assert.throws(() => std.percent.of([1, 2], [4]), /percent\.of: array length mismatch/);
+  assert.throws(() => std.percent.of("x", 1), /percent\.of: part must be finite/);
+  assert.throws(() => std.percent.of(1, "x"), /percent\.of: whole must be finite/);
+});
+
 test("std.text.concat / repeat", () => {
   assert.equal(std.text.concat("A", 1, "B"), "A1B");
   assert.deepEqual(std.text.concat("A", [1, 2, 3]), ["A1", "A2", "A3"]);

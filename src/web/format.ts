@@ -33,10 +33,15 @@ export function formatFormattedValue(v: unknown, fmt: ValueFormat | undefined): 
   if (!fmt) return formatValue(v);
 
   const rawKind = typeof fmt === "string" ? fmt : fmt.kind;
-  const kind = rawKind === "percent01" ? "percent" : rawKind;
+  const kind =
+    rawKind === "percent01" || rawKind === "percent_ratio"
+      ? "percent"
+      : rawKind === "percent_points"
+        ? "percent"
+        : rawKind;
   const scale =
     typeof fmt === "string"
-      ? rawKind === "percent01"
+      ? rawKind === "percent01" || rawKind === "percent_ratio"
         ? 100
         : 1
       : typeof fmt.scale === "number" && Number.isFinite(fmt.scale)

@@ -396,9 +396,31 @@ Rules:
 - `monthRange` MUST return month-start dates from `start` to `end` (inclusive), stepping by calendar month.
 - `workdays` MUST return dates between `start` and `end` (inclusive) excluding Saturdays and Sundays.
 
+### 1.5 `std.percent`
+
+#### `std.percent.of(part, whole)`
+
+Compute **percent points** from a part and a whole.
+
+Signature (informative):
+
+```ts
+of(part: number | number[], whole: number | number[]): number | number[]
+```
+
+Rules:
+
+- `part` and `whole` MUST be finite numbers (or arrays of finite numbers).
+- If any argument is an array:
+  - all array inputs MUST have the same length
+  - scalar inputs MUST be broadcast to that length
+- `whole` MUST be non-zero (engines MUST throw on zero).
+- The result MUST be computed as `(part / whole) * 100` (percent points).
+
 ## Appendix A) Proposed changes from 1.1 → 1.2
 
 - Adds `std.logic` (`cond`, `coalesce`, `isPresent`, `where`).
 - Adds `std.array` (take/drop/concat/zip/flatten/at/indexOf/find/some/every/distinct/product/countBy).
 - Adds `std.stats` (median/variance/stdev/percentile/quartiles/covariance/correlation/linearFit/predict).
 - Extends `std.date` with component, arithmetic, and range helpers.
+- Adds `std.percent` (`of`).

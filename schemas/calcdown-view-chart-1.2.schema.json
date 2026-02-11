@@ -15,7 +15,7 @@
         "area": { "type": "boolean" },
         "format": {
           "oneOf": [
-            { "enum": ["number", "integer", "percent", "percent01", "currency", "date"] },
+            { "enum": ["number", "integer", "percent", "percent_points", "percent01", "percent_ratio", "currency", "date"] },
             {
               "type": "object",
               "additionalProperties": false,
